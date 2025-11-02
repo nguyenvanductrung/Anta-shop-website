@@ -7,6 +7,7 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   ADMIN: '/admin',
   CART: '/cart',
+  ACCOUNT: '/account',
   MEGA_SALE: '/collections/san-pham-mega-sale'
 };
 
@@ -26,6 +27,25 @@ export const API_ENDPOINTS = {
     ADD: '/api/cart/add',
     REMOVE: '/api/cart/remove',
     UPDATE: '/api/cart/update'
+  },
+  USER: {
+    PROFILE: '/api/user/profile',
+    UPDATE_PROFILE: '/api/user/profile',
+    CHANGE_PASSWORD: '/api/user/change-password',
+    ADDRESSES: '/api/user/addresses',
+    ADD_ADDRESS: '/api/user/addresses',
+    UPDATE_ADDRESS: '/api/user/addresses/:id',
+    DELETE_ADDRESS: '/api/user/addresses/:id',
+    SET_DEFAULT_ADDRESS: '/api/user/addresses/:id/default'
+  },
+  ORDERS: {
+    LIST: '/api/orders',
+    DETAIL: '/api/orders/:id'
+  },
+  WISHLIST: {
+    LIST: '/api/wishlist',
+    ADD: '/api/wishlist/add',
+    REMOVE: '/api/wishlist/remove/:id'
   }
 };
 

@@ -169,6 +169,13 @@ const Header = () => {
 
             <button
               className="header-action wishlist-action"
+              onClick={() => {
+                if (isAuthenticated) {
+                  navigate('/account/wishlist');
+                } else {
+                  navigate(ROUTES.LOGIN);
+                }
+              }}
               aria-label="Yêu thích"
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

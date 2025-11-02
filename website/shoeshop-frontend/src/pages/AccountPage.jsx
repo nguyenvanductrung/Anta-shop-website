@@ -1,13 +1,43 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components';
 import { useAuth } from '../contexts';
+import { userService, orderService, wishlistService } from '../services/api';
 import './AccountPage.css';
 
 export default function AccountPage() {
   const navigate = useNavigate();
+  const { section } = useParams();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(section || 'overview');
+  const [orders, setOrders] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [addresses, setAddresses] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState(null);
+  const [orderFilter, setOrderFilter] = useState('all');
+
+  const [profileData, setProfileData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    birthday: '',
+    gender: ''
+  });
+
+  const [addressForm, setAddressForm] = useState({
+    recipientName: '',
+    phone: '',
+    address: '',
+    isDefault: false
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -15,94 +45,239 @@ export default function AccountPage() {
     }
   }, [isLoading, isAuthenticated, navigate]);
 
-  if (isLoading) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '18px'
-      }}>
-        Đang tải...
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  const mockOrders = [
-    {
-      id: 'ANT12345678',
-      date: '2024-01-15',
-      status: 'Đã giao',
-      total: 2599000,
-      items: 2,
-      image: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: 'ANT12345679',
-      date: '2024-01-10',
-      status: 'Đang giao',
-      total: 1899000,
-      items: 1,
-      image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=300'
-    },
-    {
-      id: 'ANT12345680',
-      date: '2024-01-05',
-      status: 'Đã giao',
-      total: 3450000,
-      items: 3,
-      image: 'https://images.pexels.com/photos/2529157/pexels-photo-2529157.jpeg?auto=compress&cs=tinysrgb&w=300'
+  useEffect(() => {
+    if (section) {
+      setActiveTab(section);
     }
-  ];
+  }, [section]);
 
-  const mockWishlist = [
-    {
-      id: 1,
-      name: 'Giày Chạy Thể Thao Nam ANTA Running Pro',
-      price: '1.259.100₫',
-      originalPrice: '1.399.000₫',
-      image: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=600',
-      inStock: true
-    },
-    {
-      id: 2,
-      name: 'Giày Bóng Rổ ANTA Basketball Elite',
-      price: '2.199.000₫',
-      originalPrice: '2.499.000₫',
-      image: 'https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg?auto=compress&cs=tinysrgb&w=600',
-      inStock: true
-    },
-    {
-      id: 3,
-      name: 'Áo Khoác Thể Thao ANTA Windbreaker',
-      price: '1.359.000₫',
-      originalPrice: '1.699.000₫',
-      image: 'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=600',
-      inStock: false
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadUserData();
     }
-  ];
+  }, [isAuthenticated, user]);
 
-  const [profileData, setProfileData] = useState({
-    fullName: user?.username || '',
-    email: user?.email || '',
-    phone: '',
-    birthday: '',
-    gender: ''
-  });
+  const loadUserData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        loadProfile(),
+        loadOrders(),
+        loadWishlist(),
+        loadAddresses()
+      ]);
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadProfile = async () => {
+    try {
+      const response = await userService.getProfile();
+      setProfileData({
+        fullName: response.fullName || user?.username || '',
+        email: response.email || user?.email || '',
+        phone: response.phone || '',
+        birthday: response.birthday || '',
+        gender: response.gender || ''
+      });
+    } catch (error) {
+      setProfileData({
+        fullName: user?.username || '',
+        email: user?.email || '',
+        phone: '',
+        birthday: '',
+        gender: ''
+      });
+    }
+  };
+
+  const loadOrders = async () => {
+    try {
+      const response = await orderService.getOrders();
+      setOrders(response);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      setOrders([]);
+    }
+  };
+
+  const loadWishlist = async () => {
+    try {
+      const response = await wishlistService.getWishlist();
+      setWishlist(response);
+    } catch (error) {
+      console.error('Error loading wishlist:', error);
+      setWishlist([]);
+    }
+  };
+
+  const loadAddresses = async () => {
+    try {
+      const response = await userService.getAddresses();
+      setAddresses(response);
+    } catch (error) {
+      console.error('Error loading addresses:', error);
+      setAddresses([]);
+    }
+  };
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
     setProfileData({ ...profileData, [name]: value });
   };
 
-  const handleSaveProfile = (e) => {
+  const handleSaveProfile = async (e) => {
     e.preventDefault();
-    alert('Cập nhật thông tin thành công!');
+    setLoading(true);
+    try {
+      await userService.updateProfile(profileData);
+      alert('Cập nhật thông tin thành công!');
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordForm({ ...passwordForm, [name]: value });
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      alert('Mật khẩu mới không khớp!');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      alert('Mật khẩu mới phải có ít nhất 6 ký tự!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await userService.changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      alert('Cập nhật mật khẩu thành công!');
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddressFormChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setAddressForm({
+      ...addressForm,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  const openAddressModal = (address = null) => {
+    if (address) {
+      setEditingAddress(address);
+      setAddressForm({
+        recipientName: address.recipientName,
+        phone: address.phone,
+        address: address.address,
+        isDefault: address.isDefault
+      });
+    } else {
+      setEditingAddress(null);
+      setAddressForm({
+        recipientName: '',
+        phone: '',
+        address: '',
+        isDefault: false
+      });
+    }
+    setShowAddressModal(true);
+  };
+
+  const closeAddressModal = () => {
+    setShowAddressModal(false);
+    setEditingAddress(null);
+    setAddressForm({
+      recipientName: '',
+      phone: '',
+      address: '',
+      isDefault: false
+    });
+  };
+
+  const handleSaveAddress = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (editingAddress) {
+        await userService.updateAddress(editingAddress.id, addressForm);
+      } else {
+        await userService.addAddress(addressForm);
+      }
+      await loadAddresses();
+      closeAddressModal();
+      alert(editingAddress ? 'Cập nhật địa chỉ thành công!' : 'Thêm địa chỉ thành công!');
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAddress = async (id) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa địa chỉ này?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await userService.deleteAddress(id);
+      await loadAddresses();
+      alert('Xóa địa chỉ thành công!');
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetDefaultAddress = async (id) => {
+    setLoading(true);
+    try {
+      await userService.setDefaultAddress(id);
+      await loadAddresses();
+      alert('Đã đặt làm địa chỉ mặc định!');
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRemoveFromWishlist = async (id) => {
+    setLoading(true);
+    try {
+      await wishlistService.removeFromWishlist(id);
+      await loadWishlist();
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
@@ -113,17 +288,52 @@ export default function AccountPage() {
   const getStatusClass = (status) => {
     switch (status) {
       case 'Đã giao':
+      case 'DELIVERED':
         return 'delivered';
       case 'Đang giao':
+      case 'SHIPPING':
         return 'shipping';
       case 'Đang xử lý':
+      case 'PROCESSING':
         return 'processing';
       case 'Đã hủy':
+      case 'CANCELLED':
         return 'cancelled';
       default:
         return '';
     }
   };
+
+  const getFilteredOrders = () => {
+    if (orderFilter === 'all') return orders;
+    return orders.filter(order => {
+      const status = order.status.toLowerCase();
+      switch (orderFilter) {
+        case 'processing':
+          return status === 'processing' || status === 'đang xử lý';
+        case 'shipping':
+          return status === 'shipping' || status === 'đang giao';
+        case 'delivered':
+          return status === 'delivered' || status === 'đã giao';
+        case 'cancelled':
+          return status === 'cancelled' || status === 'đã hủy';
+        default:
+          return true;
+      }
+    });
+  };
+
+  if (isLoading || loading) {
+    return (
+      <div className="loading-container">
+        Đang tải...
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const renderOverview = () => (
     <div className="overview-content">
@@ -133,12 +343,12 @@ export default function AccountPage() {
       </div>
 
       <div className="account-stats">
-        <div className="stat-box">
-          <div className="stat-number">3</div>
+        <div className="stat-box" onClick={() => setActiveTab('orders')}>
+          <div className="stat-number">{orders.length}</div>
           <div className="stat-text">Đơn hàng</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-number">{mockWishlist.length}</div>
+        <div className="stat-box" onClick={() => setActiveTab('wishlist')}>
+          <div className="stat-number">{wishlist.length}</div>
           <div className="stat-text">Yêu thích</div>
         </div>
         <div className="stat-box">
@@ -152,12 +362,12 @@ export default function AccountPage() {
           <h3>Đơn hàng gần đây</h3>
           <button className="link-btn" onClick={() => setActiveTab('orders')}>Xem tất cả →</button>
         </div>
-        {mockOrders.length > 0 ? (
+        {orders.length > 0 ? (
           <div className="recent-orders">
-            {mockOrders.slice(0, 2).map((order) => (
+            {orders.slice(0, 2).map((order) => (
               <div key={order.id} className="recent-order-item">
                 <div className="order-thumbnail">
-                  <img src={order.image} alt="Sản phẩm" />
+                  <img src={order.image || 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=300'} alt="Sản phẩm" />
                 </div>
                 <div className="order-content">
                   <div className="order-row">
@@ -167,11 +377,11 @@ export default function AccountPage() {
                     </span>
                   </div>
                   <div className="order-meta">
-                    <span>{new Date(order.date).toLocaleDateString('vi-VN')}</span>
+                    <span>{new Date(order.date || order.createdAt).toLocaleDateString('vi-VN')}</span>
                     <span>•</span>
-                    <span>{order.items} sản phẩm</span>
+                    <span>{order.items || order.totalItems} sản phẩm</span>
                   </div>
-                  <div className="order-price">{order.total.toLocaleString()}₫</div>
+                  <div className="order-price">{(order.total || order.totalAmount).toLocaleString()}₫</div>
                 </div>
               </div>
             ))}
@@ -185,87 +395,91 @@ export default function AccountPage() {
     </div>
   );
 
-  const renderOrders = () => (
-    <div className="orders-section">
-      <h2>Đơn hàng của tôi</h2>
+  const renderOrders = () => {
+    const filteredOrders = getFilteredOrders();
+    
+    return (
+      <div className="orders-section">
+        <h2>Đơn hàng của tôi</h2>
 
-      <div className="order-tabs">
-        <button className="order-tab active">Tất cả</button>
-        <button className="order-tab">Chờ xử lý</button>
-        <button className="order-tab">Đang giao</button>
-        <button className="order-tab">Đã giao</button>
-        <button className="order-tab">Đã hủy</button>
-      </div>
+        <div className="order-tabs">
+          <button className={`order-tab ${orderFilter === 'all' ? 'active' : ''}`} onClick={() => setOrderFilter('all')}>Tất cả</button>
+          <button className={`order-tab ${orderFilter === 'processing' ? 'active' : ''}`} onClick={() => setOrderFilter('processing')}>Chờ xử lý</button>
+          <button className={`order-tab ${orderFilter === 'shipping' ? 'active' : ''}`} onClick={() => setOrderFilter('shipping')}>Đang giao</button>
+          <button className={`order-tab ${orderFilter === 'delivered' ? 'active' : ''}`} onClick={() => setOrderFilter('delivered')}>Đã giao</button>
+          <button className={`order-tab ${orderFilter === 'cancelled' ? 'active' : ''}`} onClick={() => setOrderFilter('cancelled')}>Đã hủy</button>
+        </div>
 
-      {mockOrders.length > 0 ? (
-        <div className="order-list">
-          {mockOrders.map((order) => (
-            <div key={order.id} className="order-detail-card">
-              <div className="order-card-header">
-                <div className="order-info-top">
-                  <span className="order-code">Đơn hàng #{order.id}</span>
-                  <span className="order-date-text">{new Date(order.date).toLocaleDateString('vi-VN')}</span>
+        {filteredOrders.length > 0 ? (
+          <div className="order-list">
+            {filteredOrders.map((order) => (
+              <div key={order.id} className="order-detail-card">
+                <div className="order-card-header">
+                  <div className="order-info-top">
+                    <span className="order-code">Đơn hàng #{order.id}</span>
+                    <span className="order-date-text">{new Date(order.date || order.createdAt).toLocaleDateString('vi-VN')}</span>
+                  </div>
+                  <span className={`order-status-tag status-${getStatusClass(order.status)}`}>
+                    {order.status}
+                  </span>
                 </div>
-                <span className={`order-status-tag status-${getStatusClass(order.status)}`}>
-                  {order.status}
-                </span>
-              </div>
-              <div className="order-card-body">
-                <div className="order-product-info">
-                  <img src={order.image} alt="Sản phẩm" className="order-img" />
-                  <div className="order-details">
-                    <div className="order-quantity">{order.items} sản phẩm</div>
-                    <div className="order-amount">Tổng cộng: <strong>{order.total.toLocaleString()}₫</strong></div>
+                <div className="order-card-body">
+                  <div className="order-product-info">
+                    <img src={order.image || 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=300'} alt="Sản phẩm" className="order-img" />
+                    <div className="order-details">
+                      <div className="order-quantity">{order.items || order.totalItems} sản phẩm</div>
+                      <div className="order-amount">Tổng cộng: <strong>{(order.total || order.totalAmount).toLocaleString()}₫</strong></div>
+                    </div>
                   </div>
                 </div>
+                <div className="order-card-footer">
+                  <button className="order-action-btn secondary">Xem chi tiết</button>
+                  {(order.status === 'Đã giao' || order.status === 'DELIVERED') && (
+                    <>
+                      <button className="order-action-btn secondary">Mua lại</button>
+                      <button className="order-action-btn primary">Đánh giá</button>
+                    </>
+                  )}
+                  {(order.status === 'Đang giao' || order.status === 'SHIPPING') && (
+                    <button className="order-action-btn primary">Theo dõi đơn hàng</button>
+                  )}
+                </div>
               </div>
-              <div className="order-card-footer">
-                <button className="order-action-btn secondary">Xem chi tiết</button>
-                {order.status === 'Đã giao' && (
-                  <>
-                    <button className="order-action-btn secondary">Mua lại</button>
-                    <button className="order-action-btn primary">Đánh giá</button>
-                  </>
-                )}
-                {order.status === 'Đang giao' && (
-                  <button className="order-action-btn primary">Theo dõi đơn hàng</button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">
-          <p>Bạn chưa có đơn hàng nào</p>
-        </div>
-      )}
-    </div>
-  );
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>Không có đơn hàng nào</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderWishlist = () => (
     <div className="wishlist-section">
       <h2>Sản phẩm yêu thích</h2>
-      {mockWishlist.length > 0 ? (
+      {wishlist.length > 0 ? (
         <div className="wishlist-products">
-          {mockWishlist.map((item) => (
+          {wishlist.map((item) => (
             <div key={item.id} className="wishlist-product">
-              <button className="remove-item" aria-label="Xóa khỏi yêu thích">×</button>
+              <button className="remove-item" aria-label="Xóa khỏi yêu thích" onClick={() => handleRemoveFromWishlist(item.id)}>×</button>
               <div className="product-img-wrapper">
-                <img src={item.image} alt={item.name} />
+                <img src={item.image || item.product?.image} alt={item.name || item.product?.name} />
                 {!item.inStock && (
                   <div className="out-of-stock-label">Hết hàng</div>
                 )}
               </div>
               <div className="product-details">
-                <h4 className="product-name">{item.name}</h4>
+                <h4 className="product-name">{item.name || item.product?.name}</h4>
                 <div className="product-pricing">
-                  <span className="price-current">{item.price}</span>
+                  <span className="price-current">{(item.price || item.product?.price).toLocaleString()}₫</span>
                   {item.originalPrice && (
-                    <span className="price-original">{item.originalPrice}</span>
+                    <span className="price-original">{item.originalPrice.toLocaleString()}₫</span>
                   )}
                 </div>
                 {item.inStock ? (
-                  <button className="cart-add-btn" onClick={() => navigate(`/product/${item.id}`)}>
+                  <button className="cart-add-btn" onClick={() => navigate(`/product/${item.productId || item.id}`)}>
                     Thêm vào giỏ hàng
                   </button>
                 ) : (
@@ -354,33 +568,55 @@ export default function AccountPage() {
         </div>
 
         <div className="button-group">
-          <button type="submit" className="save-btn">Cập nhật thông tin</button>
-          <button type="button" className="cancel-btn" onClick={() => setProfileData({
-            fullName: user?.username || '',
-            email: user?.email || '',
-            phone: '',
-            birthday: '',
-            gender: ''
-          })}>Hủy</button>
+          <button type="submit" className="save-btn" disabled={loading}>
+            {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
+          </button>
+          <button type="button" className="cancel-btn" onClick={loadProfile}>Hủy</button>
         </div>
       </form>
 
       <div className="password-change-section">
         <h3>Thay đổi mật khẩu</h3>
-        <form className="password-change-form" onSubmit={(e) => { e.preventDefault(); alert('Cập nhật mật khẩu thành công!'); }}>
+        <form className="password-change-form" onSubmit={handleChangePassword}>
           <div className="field-group">
             <label htmlFor="currentPassword">Mật khẩu hiện tại *</label>
-            <input type="password" id="currentPassword" placeholder="Nhập mật khẩu hiện tại" required />
+            <input 
+              type="password" 
+              id="currentPassword"
+              name="currentPassword"
+              value={passwordForm.currentPassword}
+              onChange={handlePasswordChange}
+              placeholder="Nhập mật khẩu hiện tại" 
+              required 
+            />
           </div>
           <div className="field-group">
             <label htmlFor="newPassword">Mật khẩu mới *</label>
-            <input type="password" id="newPassword" placeholder="Nhập mật khẩu mới" required />
+            <input 
+              type="password" 
+              id="newPassword"
+              name="newPassword"
+              value={passwordForm.newPassword}
+              onChange={handlePasswordChange}
+              placeholder="Nhập mật khẩu mới" 
+              required 
+            />
           </div>
           <div className="field-group">
             <label htmlFor="confirmPassword">Xác nhận mật khẩu *</label>
-            <input type="password" id="confirmPassword" placeholder="Nhập lại mật khẩu mới" required />
+            <input 
+              type="password" 
+              id="confirmPassword"
+              name="confirmPassword"
+              value={passwordForm.confirmPassword}
+              onChange={handlePasswordChange}
+              placeholder="Nhập lại mật khẩu mới" 
+              required 
+            />
           </div>
-          <button type="submit" className="save-btn">Cập nhật mật khẩu</button>
+          <button type="submit" className="save-btn" disabled={loading}>
+            {loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+          </button>
         </form>
       </div>
     </div>
@@ -390,44 +626,38 @@ export default function AccountPage() {
     <div className="addresses-section">
       <div className="section-title">
         <h2>Sổ địa chỉ</h2>
-        <button className="add-new-btn">+ Thêm địa chỉ mới</button>
+        <button className="add-new-btn" onClick={() => openAddressModal()}>+ Thêm địa chỉ mới</button>
       </div>
 
-      <div className="address-list">
-        <div className="address-item is-default">
-          <div className="address-header-row">
-            <div className="address-recipient">
-              <h4>Nguyễn Văn A</h4>
-              <span className="default-tag">Mặc định</span>
+      {addresses.length > 0 ? (
+        <div className="address-list">
+          {addresses.map((address) => (
+            <div key={address.id} className={`address-item ${address.isDefault ? 'is-default' : ''}`}>
+              <div className="address-header-row">
+                <div className="address-recipient">
+                  <h4>{address.recipientName}</h4>
+                  {address.isDefault && <span className="default-tag">Mặc định</span>}
+                </div>
+              </div>
+              <div className="address-content">
+                <p className="recipient-phone">{address.phone}</p>
+                <p className="recipient-address">{address.address}</p>
+              </div>
+              <div className="address-action-buttons">
+                <button className="edit-btn" onClick={() => openAddressModal(address)}>Chỉnh sửa</button>
+                <button className="delete-btn" onClick={() => handleDeleteAddress(address.id)}>Xóa</button>
+                {!address.isDefault && (
+                  <button className="set-default-btn" onClick={() => handleSetDefaultAddress(address.id)}>Đặt làm mặc định</button>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="address-content">
-            <p className="recipient-phone">+84 123 456 789</p>
-            <p className="recipient-address">123 Đường ABC, Phường XYZ, Quận 1, TP. Hồ Chí Minh</p>
-          </div>
-          <div className="address-action-buttons">
-            <button className="edit-btn">Chỉnh sửa</button>
-            <button className="delete-btn">Xóa</button>
-          </div>
+          ))}
         </div>
-
-        <div className="address-item">
-          <div className="address-header-row">
-            <div className="address-recipient">
-              <h4>Nguyễn Văn B</h4>
-            </div>
-          </div>
-          <div className="address-content">
-            <p className="recipient-phone">+84 987 654 321</p>
-            <p className="recipient-address">456 Đường DEF, Phường LMN, Quận 3, TP. Hồ Chí Minh</p>
-          </div>
-          <div className="address-action-buttons">
-            <button className="edit-btn">Chỉnh sửa</button>
-            <button className="delete-btn">Xóa</button>
-            <button className="set-default-btn">Đặt làm mặc định</button>
-          </div>
+      ) : (
+        <div className="empty-state">
+          <p>Bạn chưa có địa chỉ nào</p>
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -527,6 +757,72 @@ export default function AccountPage() {
           </div>
         </div>
       </div>
+
+      {showAddressModal && (
+        <div className="modal-overlay" onClick={closeAddressModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{editingAddress ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}</h3>
+              <button className="modal-close" onClick={closeAddressModal}>×</button>
+            </div>
+            <form onSubmit={handleSaveAddress} className="modal-body">
+              <div className="field-group">
+                <label htmlFor="recipientName">Họ và tên người nhận *</label>
+                <input
+                  type="text"
+                  id="recipientName"
+                  name="recipientName"
+                  value={addressForm.recipientName}
+                  onChange={handleAddressFormChange}
+                  placeholder="Nhập họ và tên"
+                  required
+                />
+              </div>
+              <div className="field-group">
+                <label htmlFor="addressPhone">Số điện thoại *</label>
+                <input
+                  type="tel"
+                  id="addressPhone"
+                  name="phone"
+                  value={addressForm.phone}
+                  onChange={handleAddressFormChange}
+                  placeholder="0123456789"
+                  required
+                />
+              </div>
+              <div className="field-group">
+                <label htmlFor="addressDetail">Địa chỉ chi tiết *</label>
+                <textarea
+                  id="addressDetail"
+                  name="address"
+                  value={addressForm.address}
+                  onChange={handleAddressFormChange}
+                  placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                  rows="3"
+                  required
+                />
+              </div>
+              <div className="field-group checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="isDefault"
+                    checked={addressForm.isDefault}
+                    onChange={handleAddressFormChange}
+                  />
+                  <span>Đặt làm địa chỉ mặc định</span>
+                </label>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="cancel-btn" onClick={closeAddressModal}>Hủy</button>
+                <button type="submit" className="save-btn" disabled={loading}>
+                  {loading ? 'Đang lưu...' : 'Lưu địa chỉ'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

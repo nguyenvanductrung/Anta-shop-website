@@ -6,7 +6,7 @@ import './AuthPage.css';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, isAdmin } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -34,19 +34,32 @@ export default function Login() {
     const newErrors = {};
     
     if (!formData.email) {
-      newErrors.email = 'Vui lòng nhập email';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = 'Vui lòng nhập email hoặc tên đăng nhập';
     }
     
     if (!formData.password) {
       newErrors.password = 'Vui lòng nhập mật khẩu';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const generateToken = (userData) => {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const payload = {
+      sub: userData.email || userData.username,
+      username: userData.username,
+      role: userData.role,
+      email: userData.email,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
+    };
+    
+    const base64Header = btoa(JSON.stringify(header));
+    const base64Payload = btoa(JSON.stringify(payload));
+    
+    return `${base64Header}.${base64Payload}.mock_signature`;
   };
 
   const handleSubmit = async (e) => {
@@ -60,15 +73,43 @@ export default function Login() {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJVc2VyIiwicm9sZSI6IlVTRVIiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20ifQ.mock';
-      login(mockToken);
+      let userData;
+      let token;
       
-      setSuccessMessage('Đăng nhập thành công!');
-      setTimeout(() => {
-        navigate('/home', { replace: true });
-      }, 500);
+      if ((formData.email === 'admin' || formData.email === 'admin@anta.com') && formData.password === 'abc123!@#') {
+        userData = {
+          username: 'admin',
+          email: 'admin@anta.com',
+          role: 'ADMIN'
+        };
+        token = generateToken(userData);
+        
+        login(token);
+        setSuccessMessage('Đăng nhập Admin thành công!');
+        
+        setTimeout(() => {
+          navigate('/admin', { replace: true });
+        }, 500);
+      } else if (formData.email && formData.password.length >= 6) {
+        const username = formData.email.split('@')[0] || 'User';
+        userData = {
+          username: username.charAt(0).toUpperCase() + username.slice(1),
+          email: formData.email,
+          role: 'USER'
+        };
+        token = generateToken(userData);
+        
+        login(token);
+        setSuccessMessage('Đăng nhập thành công!');
+        
+        setTimeout(() => {
+          navigate('/home', { replace: true });
+        }, 500);
+      } else {
+        throw new Error('Invalid credentials');
+      }
     } catch (error) {
-      setErrors({ general: 'Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.' });
+      setErrors({ general: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.' });
     } finally {
       setIsLoading(false);
     }
@@ -119,18 +160,18 @@ export default function Login() {
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                       <polyline points="22,6 12,13 2,6"></polyline>
                     </svg>
-                    Email
+                    Email hoặc Tên đăng nhập
                   </label>
                   <div className="input-wrapper">
                     <input
-                      type="email"
+                      type="text"
                       id="email"
                       name="email"
-                      placeholder="Nhập địa chỉ email của bạn"
+                      placeholder="Nhập email hoặc tên đăng nhập"
                       value={formData.email}
                       onChange={handleChange}
                       className={`form-input ${errors.email ? 'input-error' : ''}`}
-                      autoComplete="email"
+                      autoComplete="username"
                     />
                   </div>
                   {errors.email && (
@@ -226,6 +267,18 @@ export default function Login() {
                     <span>{successMessage}</span>
                   </div>
                 )}
+
+                <div className="auth-info-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                  <div>
+                    <p><strong>Đăng nhập Admin:</strong> Sử dụng username <code>admin</code> và password <code>abc123!@#</code></p>
+                    <p><strong>Đăng nhập Customer:</strong> Sử dụng bất kỳ email và mật khẩu hợp lệ (tối thiểu 6 ký tự)</p>
+                  </div>
+                </div>
 
                 <button 
                   type="submit" 

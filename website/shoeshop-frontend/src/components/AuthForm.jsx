@@ -28,13 +28,16 @@ export default function AuthForm({ type }) {
       const ADMIN_PASSWORD = "abc123!@#";
 
       if (formData.username === ADMIN_USERNAME && formData.password === ADMIN_PASSWORD) {
-        const mockAdminToken = btoa(JSON.stringify({
+        const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+        const payload = btoa(JSON.stringify({
           sub: ADMIN_USERNAME,
           role: "ADMIN",
           email: "admin@anta.com",
-          iat: Date.now(),
-          exp: Date.now() + 86400000
+          iat: Math.floor(Date.now() / 1000),
+          exp: Math.floor(Date.now() / 1000) + 86400
         }));
+        const signature = btoa("mock-signature");
+        const mockAdminToken = `${header}.${payload}.${signature}`;
 
         login(mockAdminToken);
         alert("Đăng nhập thành công! Chào mừng Admin!");

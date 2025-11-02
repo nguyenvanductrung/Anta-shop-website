@@ -74,20 +74,44 @@ export default function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const generateToken = (userData) => {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const payload = {
+      sub: userData.email,
+      username: userData.username,
+      role: userData.role,
+      email: userData.email,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
+    };
+
+    const base64Header = btoa(JSON.stringify(header));
+    const base64Payload = btoa(JSON.stringify(payload));
+
+    return `${base64Header}.${base64Payload}.mock_signature`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
     setErrors({});
-    
+
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcm5hbWUiOiJVc2VyIiwicm9sZSI6IlVTRVIiLCJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20ifQ.mock';
-      login(mockToken);
-      
+
+      const username = `${formData.lastName} ${formData.firstName}`.trim();
+      const userData = {
+        username: username,
+        email: formData.email,
+        role: 'USER'
+      };
+
+      const token = generateToken(userData);
+      login(token);
+
       setSuccessMessage('Đăng ký thành công!');
       setTimeout(() => {
         navigate('/home', { replace: true });
@@ -130,7 +154,7 @@ export default function Register() {
                   </svg>
                 </div>
                 <h1 className="auth-title">Đăng ký tài khoản</h1>
-                <p className="auth-subtitle">Tạo tài khoản để trải nghiệm mua sắm tốt hơn</p>
+                <p className="auth-subtitle">Tạo tài khoản để trải nghi��m mua sắm tốt hơn</p>
               </div>
               
               <div className="auth-switch">
