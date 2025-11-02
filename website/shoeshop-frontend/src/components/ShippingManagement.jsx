@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './ShippingManagement.css';
 
 export default function ShippingManagement() {
-  const [selectedStatus, setSelectedStatus] = useState('needs-shipping');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchOrder, setSearchOrder] = useState('');
 
   const statusFilters = [
@@ -12,189 +12,278 @@ export default function ShippingManagement() {
     { id: 'sent', label: 'Đã gửi', count: 10 },
     { id: 'completed', label: 'Hoàn thành', count: 2 },
     { id: 'cancelled', label: 'Hủy bỏ', count: 0 },
-    { id: 'return', label: 'Trở lại', count: 0 }
+    { id: 'return', label: 'Trả hàng', count: 0 }
   ];
 
-  const secondaryFilters = [
-    { id: 'all', label: 'Tất cả (18)' },
-    { id: 'processing', label: 'Cần xử lý (3)' },
-    { id: 'return', label: 'Trở lại' }
-  ];
-
-  // Mock data for orders
-  const orders = [
+  const mockOrders = [
     {
       id: 1,
-      customer: 'Viên',
+      customer: 'Nguyễn Văn A',
       orderNumber: '2201223FJAOQ',
+      date: '25/12/2024',
+      total: '1.000.000 VNĐ',
+      status: 'needs-shipping',
       products: [
         {
           id: 1,
-          name: 'T-Shirt Groot Black',
-          image: 'https://via.placeholder.com/60x60?text=👕',
+          name: 'Giày ANTA KT7 - Đen',
+          image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=80',
           price: '600.000 VNĐ',
           quantity: 1,
-          status: 'Cần phải được gửi',
-          dueDate: 'Trước 28/05/2025',
-          shippingService: 'J&T'
-        },
-        {
-          id: 2,
-          name: 'Sepatu Nike',
-          image: 'https://via.placeholder.com/60x60?text=👟',
-          price: '400.000 VNĐ',
-          quantity: 1,
-          status: 'Cần phải được gửi',
-          dueDate: 'Trước 28/05/2025',
+          dueDate: 'Trước 28/12/2024',
           shippingService: 'J&T'
         }
       ]
     },
     {
       id: 2,
-      customer: 'Thao',
+      customer: 'Trần Thị B',
       orderNumber: '2197139TYQPWO',
+      date: '24/12/2024',
+      total: '800.000 VNĐ',
+      status: 'needs-shipping',
+      products: [
+        {
+          id: 2,
+          name: 'Áo thun ANTA Running',
+          image: 'https://images.pexels.com/photos/8532616/pexels-photo-8532616.jpeg?auto=compress&cs=tinysrgb&w=80',
+          price: '400.000 VNĐ',
+          quantity: 2,
+          dueDate: 'Trước 27/12/2024',
+          shippingService: 'GHTK'
+        }
+      ]
+    },
+    {
+      id: 3,
+      customer: 'Lê Văn C',
+      orderNumber: '2198456ABCDE',
+      date: '23/12/2024',
+      total: '2.990.000 VNĐ',
+      status: 'sent',
       products: [
         {
           id: 3,
-          name: 'T-Shirt Love Kills',
-          image: 'https://via.placeholder.com/60x60?text=👕',
-          price: '400.000 VNĐ',
+          name: 'Giày ANTA C202 GT',
+          image: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=80',
+          price: '1.790.000 VNĐ',
+          quantity: 1,
+          dueDate: 'Đang giao hàng',
+          shippingService: 'Viettel Post'
+        }
+      ]
+    },
+    {
+      id: 4,
+      customer: 'Phạm Thị D',
+      orderNumber: '2199678FGHIJ',
+      date: '22/12/2024',
+      total: '1.340.000 VNĐ',
+      status: 'completed',
+      products: [
+        {
+          id: 4,
+          name: 'Quần short ANTA Training',
+          image: 'https://images.pexels.com/photos/7432926/pexels-photo-7432926.jpeg?auto=compress&cs=tinysrgb&w=80',
+          price: '450.000 VNĐ',
           quantity: 2,
-          status: 'Cần phải được gửi',
-          dueDate: 'Trước 28/05/2025',
-          shippingService: 'GHTK'
+          dueDate: 'Đã hoàn thành',
+          shippingService: 'J&T'
         }
       ]
     }
   ];
 
+  const [orders] = useState(mockOrders);
+  const [filteredOrders, setFilteredOrders] = useState(mockOrders);
+
   const handleSearch = () => {
-    // TODO: Implement order search
-    // console.log('Searching for order:', searchOrder);
+    let filtered = [...orders];
+    
+    if (searchOrder) {
+      filtered = filtered.filter(order => 
+        order.orderNumber.toLowerCase().includes(searchOrder.toLowerCase()) ||
+        order.customer.toLowerCase().includes(searchOrder.toLowerCase())
+      );
+    }
+    
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(order => order.status === selectedStatus);
+    }
+    
+    setFilteredOrders(filtered);
   };
 
   const handleReset = () => {
     setSearchOrder('');
+    setSelectedStatus('all');
+    setFilteredOrders(orders);
+  };
+
+  const handleStatusChange = (statusId) => {
+    setSelectedStatus(statusId);
+    let filtered = [...orders];
+    
+    if (statusId !== 'all') {
+      filtered = filtered.filter(order => order.status === statusId);
+    }
+    
+    setFilteredOrders(filtered);
+  };
+
+  const handleArrangeShipping = (orderId, productId) => {
+    console.log('Arranging shipping for order:', orderId, 'product:', productId);
+    alert('Chức năng sắp xếp giao hàng sẽ được phát triển');
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      'all': { label: 'Tất cả', class: '' },
+      'unpaid': { label: 'Chưa thanh toán', class: 'unpaid' },
+      'needs-shipping': { label: 'Cần gửi', class: 'needs-shipping' },
+      'sent': { label: 'Đang giao', class: 'sent' },
+      'completed': { label: 'Hoàn thành', class: 'completed' },
+      'cancelled': { label: 'Hủy bỏ', class: 'cancelled' },
+      'return': { label: 'Trả hàng', class: 'return' }
+    };
+    return statusMap[status] || statusMap['all'];
   };
 
   return (
     <div className="shipping-management">
-      <div className="admin-content">
-        <div className="page-header">
-          <h1 className="page-title">Sản phẩm</h1>
-          <div className="header-actions">
-            <select className="month-selector">
-              <option value="May 2022">May 2022</option>
-              <option value="April 2022">April 2022</option>
-              <option value="March 2022">March 2022</option>
-            </select>
-          </div>
+      <div className="shipping-management-content">
+        <div className="page-header-section">
+          <h1 className="page-main-title">Quản Lý Vận Chuyển</h1>
+          <p className="page-subtitle">Quản lý tất cả đơn hàng và vận chuyển</p>
         </div>
 
-        <div className="tabs">
-          <button className="tab active">Sản phẩm của tôi</button>
-          <button className="tab">Thêm sản phẩm</button>
-          <button className="tab">Vi phạm</button>
-        </div>
-
-        <div className="status-filters">
+        <div className="status-filters-section">
           {statusFilters.map((filter) => (
             <button
               key={filter.id}
-              className={`status-filter ${selectedStatus === filter.id ? 'active' : ''}`}
-              onClick={() => setSelectedStatus(filter.id)}
+              className={`status-filter-btn ${selectedStatus === filter.id ? 'active' : ''}`}
+              onClick={() => handleStatusChange(filter.id)}
             >
-              {filter.label} {filter.count > 0 && `(${filter.count})`}
+              <span className="filter-label">{filter.label}</span>
+              {filter.count > 0 && (
+                <span className="filter-count">{filter.count}</span>
+              )}
             </button>
           ))}
         </div>
 
-        <div className="search-section">
-          <div className="search-bar">
+        <div className="search-filters-card">
+          <div className="search-input-wrapper">
             <input
               type="text"
-              placeholder="No. Pesanan"
+              className="search-order-input"
+              placeholder="Nhập số đơn hàng hoặc tên khách hàng..."
               value={searchOrder}
               onChange={(e) => setSearchOrder(e.target.value)}
             />
-            <span className="search-placeholder">Masukkan no. pesanan</span>
-            <button className="search-icon">🔍</button>
-          </div>
-          <div className="search-actions">
-            <button className="search-btn" onClick={handleSearch}>
-              Tìm kiếm
-            </button>
-            <button className="reset-btn" onClick={handleReset}>
-              Cài lại
-            </button>
-          </div>
-        </div>
-
-        <div className="secondary-filters">
-          {secondaryFilters.map((filter) => (
-            <button
-              key={filter.id}
-              className={`secondary-filter ${filter.id === 'all' ? 'active' : ''}`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
-
-        <div className="orders-section">
-          <div className="orders-header">
-            <h3>Đơn hàng cần xử lý</h3>
+            <span className="search-input-icon">🔍</span>
           </div>
           
-          <div className="orders-list">
-            {orders.map((order) => (
-              <div key={order.id} className="order-group">
-                <div className="order-header">
-                  <div className="customer-info">
-                    <span className="customer-icon">👤</span>
-                    <span className="customer-name">{order.customer}</span>
+          <div className="search-actions-row">
+            <button className="search-action-btn primary" onClick={handleSearch}>
+              <span className="btn-icon">🔍</span>
+              Tìm kiếm
+            </button>
+            <button className="search-action-btn secondary" onClick={handleReset}>
+              <span className="btn-icon">↻</span>
+              Đặt lại
+            </button>
+            <div className="total-orders-info">
+              <span className="orders-count">{filteredOrders.length}</span> đơn hàng
+            </div>
+          </div>
+        </div>
+
+        <div className="orders-list-section">
+          {filteredOrders.length === 0 ? (
+            <div className="empty-orders-state">
+              <span className="empty-orders-icon">📦</span>
+              <p className="empty-orders-title">Không tìm thấy đơn hàng</p>
+              <p className="empty-orders-description">Thử thay đổi bộ lọc hoặc tìm kiếm khác</p>
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
+              <div key={order.id} className="order-card">
+                <div className="order-card-header">
+                  <div className="order-info-left">
+                    <div className="customer-name-section">
+                      <span className="customer-icon">👤</span>
+                      <span className="customer-name">{order.customer}</span>
+                    </div>
+                    <div className="order-meta">
+                      <span className="order-number-label">Số đơn hàng:</span>
+                      <span className="order-number-value">{order.orderNumber}</span>
+                      <span className="order-date">• {order.date}</span>
+                    </div>
                   </div>
-                  <div className="order-number">
-                    Số đơn hàng {order.orderNumber}
+                  <div className="order-info-right">
+                    <div className="order-total-section">
+                      <span className="total-label">Tổng cộng:</span>
+                      <span className="total-value">{order.total}</span>
+                    </div>
+                    <span className={`order-status-badge ${order.status}`}>
+                      {getStatusBadge(order.status).label}
+                    </span>
                   </div>
                 </div>
                 
-                <div className="order-products">
+                <div className="order-products-list">
                   {order.products.map((product) => (
-                    <div key={product.id} className="product-row">
-                      <div className="product-info">
-                        <img src={product.image} alt={product.name} />
-                        <div className="product-details">
-                          <h4>{product.name}</h4>
-                          <div className="product-price">{product.price}</div>
+                    <div key={product.id} className="order-product-row">
+                      <div className="product-main-info">
+                        <img 
+                          src={product.image} 
+                          alt={product.name} 
+                          className="product-order-thumbnail"
+                        />
+                        <div className="product-order-details">
+                          <h4 className="product-order-name">{product.name}</h4>
+                          <p className="product-order-price">
+                            {product.price} × {product.quantity}
+                          </p>
                         </div>
                       </div>
                       
-                      <div className="product-status">
-                        <div className="status-text">{product.status}</div>
-                        <div className="due-date">{product.dueDate}</div>
+                      <div className="product-shipping-info">
+                        <div className="shipping-status-section">
+                          <span className="shipping-status-label">Trạng thái:</span>
+                          <span className={`shipping-status-text ${order.status}`}>
+                            {product.dueDate}
+                          </span>
+                        </div>
+                        <div className="shipping-service-section">
+                          <span className="shipping-service-icon">🚚</span>
+                          <span className="shipping-service-name">{product.shippingService}</span>
+                        </div>
                       </div>
                       
-                      <div className="product-quantity">
-                        {product.quantity}
+                      <div className="product-quantity-section">
+                        <span className="quantity-label">SL:</span>
+                        <span className="quantity-value">{product.quantity}</span>
                       </div>
                       
-                      <div className="product-actions">
-                        <button className="arrange-shipping-btn">
-                          Sắp xếp giao hàng
-                        </button>
-                      </div>
-                      
-                      <div className="shipping-service">
-                        {product.shippingService}
-                      </div>
+                      {order.status === 'needs-shipping' && (
+                        <div className="product-actions-section">
+                          <button 
+                            className="arrange-shipping-button"
+                            onClick={() => handleArrangeShipping(order.id, product.id)}
+                          >
+                            <span className="btn-icon">📦</span>
+                            Sắp xếp giao hàng
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>

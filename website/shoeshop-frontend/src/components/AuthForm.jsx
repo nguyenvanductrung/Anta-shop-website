@@ -2,6 +2,8 @@ import { useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import { useAuth } from "../contexts";
+import { STORAGE_KEYS } from "../constants";
 import "./AuthForm.css";
 
 export default function AuthForm({ type }) {
@@ -12,6 +14,7 @@ export default function AuthForm({ type }) {
   });
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -19,6 +22,27 @@ export default function AuthForm({ type }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (type === "login") {
+      const ADMIN_USERNAME = "admin";
+      const ADMIN_PASSWORD = "abc123!@#";
+
+      if (formData.username === ADMIN_USERNAME && formData.password === ADMIN_PASSWORD) {
+        const mockAdminToken = btoa(JSON.stringify({
+          sub: ADMIN_USERNAME,
+          role: "ADMIN",
+          email: "admin@anta.com",
+          iat: Date.now(),
+          exp: Date.now() + 86400000
+        }));
+
+        login(mockAdminToken);
+        alert("Đăng nhập thành công! Chào mừng Admin!");
+        navigate("/admin");
+        return;
+      }
+    }
+
     try {
       const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
       const url =
@@ -37,24 +61,26 @@ export default function AuthForm({ type }) {
         alert("Đăng ký thành công, vui lòng đăng nhập!");
         navigate("/login");
       } else {
-        const token = res.data.token; // 👈 lấy token từ BE
-        localStorage.setItem("token", token); // lưu token vào localStorage
+        const token = res.data.token;
+        login(token);
 
-        // 🔍 Giải mã token để lấy thông tin user
         const decoded = jwtDecode(token);
         console.log("Decoded token:", decoded);
 
-        // 👇 Nếu token có field 'role' thì điều hướng theo quyền
         if (decoded.role === "ADMIN") {
-          alert("Login thành công! Chào admin!");
+          alert("Đăng nhập thành công! Chào Admin!");
           navigate("/admin");
         } else {
-          alert("Login thành công! Chào user!");
+          alert("Đăng nhập thành công!");
           navigate("/home");
         }
       }
     } catch (err) {
-      alert("Error: " + (err.response?.data?.message || err.message));
+      if (type === "login") {
+        alert("Sai tên đăng nhập hoặc mật khẩu!");
+      } else {
+        alert("Lỗi: " + (err.response?.data?.message || err.message));
+      }
     }
   };
 

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider, AuthProvider } from "./contexts";
+import { ProtectedRoute } from "./components";
 import { ROUTES } from "./constants";
 import {
   HomePage,
@@ -32,7 +33,7 @@ function App() {
             <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPassword />} />
             <Route path={ROUTES.RESET_PASSWORD} element={<ResetPassword />} />
             <Route path={ROUTES.HOME} element={<HomePage />} />
-            <Route path={ROUTES.ADMIN} element={<AdminPage />} />
+            <Route path={ROUTES.ADMIN} element={<ProtectedRoute requireAdmin={true}><AdminPage /></ProtectedRoute>} />
             <Route path={ROUTES.CART} element={<CartPage />} />
             <Route path={ROUTES.MEGA_SALE} element={<MegaSale />} />
             <Route path="/products" element={<ProductListPage />} />
@@ -40,10 +41,10 @@ function App() {
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:id" element={<BlogDetailPage />} />
             <Route path="/search" element={<SearchPage />} />
-            <Route path="/checkout" element={<CheckoutPage />} />
-            <Route path="/order-success" element={<OrderSuccessPage />} />
-            <Route path="/account" element={<AccountPage />} />
-            <Route path="/account/:section" element={<AccountPage />} />
+            <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+            <Route path="/order-success" element={<ProtectedRoute><OrderSuccessPage /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+            <Route path="/account/:section" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
             <Route path="/men" element={<ProductListPage />} />
             <Route path="/women" element={<ProductListPage />} />
             <Route path="/kids" element={<ProductListPage />} />

@@ -44,12 +44,19 @@ html, body, #root {
   border-radius: 10px;
   outline: none;
   font-size: 1rem;
-  transition: border 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #fff;
+}
+
+.auth-form input:hover {
+  border-color: #bbb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .auth-form input:focus {
   border: 1px solid #6a11cb;
-  box-shadow: 0 0 6px rgba(106, 17, 203, 0.3);
+  box-shadow: 0 0 0 4px rgba(106, 17, 203, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 /* Nút đẹp */
@@ -63,12 +70,40 @@ html, body, #root {
   font-size: 1rem;
   font-weight: bold;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-form button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #7d24d8 0%, #3d8aff 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 .auth-form button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(106, 17, 203, 0.35);
+}
+
+.auth-form button:hover::before {
+  opacity: 1;
+}
+
+.auth-form button:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(106, 17, 203, 0.25);
+}
+
+.auth-form button span {
+  position: relative;
+  z-index: 1;
 }
 
 /* Link */
@@ -82,10 +117,27 @@ html, body, #root {
   color: #2575fc;
   font-weight: 600;
   text-decoration: none;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+.auth-form a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: #2575fc;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .auth-form a:hover {
-  text-decoration: underline;
+  color: #6a11cb;
+}
+
+.auth-form a:hover::after {
+  width: 100%;
 }
 
 /* Hiệu ứng */

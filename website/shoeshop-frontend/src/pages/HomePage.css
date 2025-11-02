@@ -13,11 +13,23 @@
 
 /* Sport Categories Section */
 .sport-categories-section {
-  padding: 100px 0;
-  background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
+  padding: 120px 0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   width: 100%;
   margin: 0;
   animation: sectionFadeIn 0.8s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.sport-categories-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(215, 0, 16, 0.2) 50%, transparent 100%);
 }
 
 @keyframes sectionFadeIn {
@@ -200,10 +212,11 @@
 
 /* Featured Products Section */
 .featured-products-section {
-  padding: 100px 0;
-  background: #fafafa;
+  padding: 120px 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   width: 100%;
   margin: 0;
+  position: relative;
 }
 
 /* Promo Banner Section */
@@ -595,10 +608,11 @@
 
 /* New Arrivals Section */
 .new-arrivals-section {
-  padding: 100px 0;
-  background: #fafafa;
+  padding: 120px 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   width: 100%;
   margin: 0;
+  position: relative;
 }
 
 /* Brand Story Section */
@@ -790,10 +804,11 @@
 
 /* Brands Partners Section */
 .brands-partners-section {
-  padding: 100px 0;
-  background: #fafafa;
+  padding: 120px 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   width: 100%;
   margin: 0;
+  position: relative;
 }
 
 /* Newsletter Signup Section */

@@ -145,11 +145,15 @@ const Header = () => {
           <div className="header-right">
             <button
               className="header-action user-action"
-              onClick={() =>
-                isAuthenticated
-                  ? navigate(ROUTES.ADMIN)
-                  : navigate(ROUTES.LOGIN)
-              }
+              onClick={() => {
+                if (!isAuthenticated) {
+                  navigate(ROUTES.LOGIN);
+                } else if (user?.role === 'ADMIN') {
+                  navigate(ROUTES.ADMIN);
+                } else {
+                  navigate('/account');
+                }
+              }}
               aria-label={isAuthenticated ? "Tài khoản" : "Đăng nhập"}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">

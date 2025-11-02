@@ -6,11 +6,30 @@ import './AccountPage.css';
 
 export default function AccountPage() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/login');
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  if (isLoading) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Đang tải...
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
-    navigate('/login');
     return null;
   }
 
@@ -106,190 +125,195 @@ export default function AccountPage() {
     }
   };
 
-  const renderDashboard = () => (
-    <div className="dashboard-content">
-      <div className="welcome-section">
-        <h2>Xin chào, {user?.username}!</h2>
-        <p>Chào mừng bạn quay trở lại với ANTA Việt Nam</p>
+  const renderOverview = () => (
+    <div className="overview-content">
+      <div className="account-welcome">
+        <h1>Tài khoản của tôi</h1>
+        <p>Xin chào, <strong>{user?.username}</strong>!</p>
       </div>
 
-      <div className="quick-stats">
-        <div className="stat-card">
-          <div className="stat-icon">📦</div>
-          <div className="stat-info">
-            <div className="stat-value">3</div>
-            <div className="stat-label">Đơn hàng</div>
-          </div>
+      <div className="account-stats">
+        <div className="stat-box">
+          <div className="stat-number">3</div>
+          <div className="stat-text">Đơn hàng</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">❤️</div>
-          <div className="stat-info">
-            <div className="stat-value">{mockWishlist.length}</div>
-            <div className="stat-label">Yêu thích</div>
-          </div>
+        <div className="stat-box">
+          <div className="stat-number">{mockWishlist.length}</div>
+          <div className="stat-text">Yêu thích</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-icon">🎁</div>
-          <div className="stat-info">
-            <div className="stat-value">0</div>
-            <div className="stat-label">Ưu đãi</div>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">⭐</div>
-          <div className="stat-info">
-            <div className="stat-value">0</div>
-            <div className="stat-label">Điểm thưởng</div>
-          </div>
+        <div className="stat-box">
+          <div className="stat-number">0</div>
+          <div className="stat-text">Điểm thưởng</div>
         </div>
       </div>
 
-      <div className="recent-orders-section">
-        <div className="section-header">
+      <div className="recent-section">
+        <div className="section-title">
           <h3>Đơn hàng gần đây</h3>
-          <button className="view-all-btn" onClick={() => setActiveTab('orders')}>
-            Xem tất cả
-          </button>
+          <button className="link-btn" onClick={() => setActiveTab('orders')}>Xem tất cả →</button>
         </div>
-        <div className="orders-list">
-          {mockOrders.slice(0, 2).map((order) => (
-            <div key={order.id} className="order-card">
-              <div className="order-image">
-                <img src={order.image} alt="Order" />
-              </div>
-              <div className="order-info">
-                <div className="order-header-row">
-                  <span className="order-id">{order.id}</span>
-                  <span className={`order-status ${getStatusClass(order.status)}`}>
-                    {order.status}
-                  </span>
+        {mockOrders.length > 0 ? (
+          <div className="recent-orders">
+            {mockOrders.slice(0, 2).map((order) => (
+              <div key={order.id} className="recent-order-item">
+                <div className="order-thumbnail">
+                  <img src={order.image} alt="Sản phẩm" />
                 </div>
-                <p className="order-date">{new Date(order.date).toLocaleDateString('vi-VN')}</p>
-                <p className="order-items">{order.items} sản phẩm</p>
-                <p className="order-total">Tổng: {order.total.toLocaleString()}₫</p>
+                <div className="order-content">
+                  <div className="order-row">
+                    <span className="order-number">#{order.id}</span>
+                    <span className={`status-badge status-${getStatusClass(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="order-meta">
+                    <span>{new Date(order.date).toLocaleDateString('vi-VN')}</span>
+                    <span>•</span>
+                    <span>{order.items} sản phẩm</span>
+                  </div>
+                  <div className="order-price">{order.total.toLocaleString()}₫</div>
+                </div>
               </div>
-              <button className="view-order-btn">Xem chi tiết</button>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="empty-state">
+            <p>Bạn chưa có đơn hàng nào</p>
+          </div>
+        )}
       </div>
     </div>
   );
 
   const renderOrders = () => (
-    <div className="orders-content">
+    <div className="orders-section">
       <h2>Đơn hàng của tôi</h2>
-      <div className="orders-filter">
-        <button className="filter-btn active">Tất cả</button>
-        <button className="filter-btn">Đang xử lý</button>
-        <button className="filter-btn">Đang giao</button>
-        <button className="filter-btn">Đã giao</button>
-        <button className="filter-btn">Đã hủy</button>
+
+      <div className="order-tabs">
+        <button className="order-tab active">Tất cả</button>
+        <button className="order-tab">Chờ xử lý</button>
+        <button className="order-tab">Đang giao</button>
+        <button className="order-tab">Đã giao</button>
+        <button className="order-tab">Đã hủy</button>
       </div>
 
-      <div className="orders-list-full">
-        {mockOrders.map((order) => (
-          <div key={order.id} className="order-item-full">
-            <div className="order-header-full">
-              <div className="order-id-date">
-                <span className="order-id-label">Mã đơn hàng: <strong>{order.id}</strong></span>
-                <span className="order-date-label">{new Date(order.date).toLocaleDateString('vi-VN')}</span>
+      {mockOrders.length > 0 ? (
+        <div className="order-list">
+          {mockOrders.map((order) => (
+            <div key={order.id} className="order-detail-card">
+              <div className="order-card-header">
+                <div className="order-info-top">
+                  <span className="order-code">Đơn hàng #{order.id}</span>
+                  <span className="order-date-text">{new Date(order.date).toLocaleDateString('vi-VN')}</span>
+                </div>
+                <span className={`order-status-tag status-${getStatusClass(order.status)}`}>
+                  {order.status}
+                </span>
               </div>
-              <span className={`order-status-badge ${getStatusClass(order.status)}`}>
-                {order.status}
-              </span>
-            </div>
-            <div className="order-body-full">
-              <img src={order.image} alt="Product" className="order-product-image" />
-              <div className="order-details-full">
-                <p className="order-items-count">{order.items} sản phẩm</p>
-                <p className="order-total-full">Tổng tiền: <strong>{order.total.toLocaleString()}₫</strong></p>
+              <div className="order-card-body">
+                <div className="order-product-info">
+                  <img src={order.image} alt="Sản phẩm" className="order-img" />
+                  <div className="order-details">
+                    <div className="order-quantity">{order.items} sản phẩm</div>
+                    <div className="order-amount">Tổng cộng: <strong>{order.total.toLocaleString()}₫</strong></div>
+                  </div>
+                </div>
+              </div>
+              <div className="order-card-footer">
+                <button className="order-action-btn secondary">Xem chi tiết</button>
+                {order.status === 'Đã giao' && (
+                  <>
+                    <button className="order-action-btn secondary">Mua lại</button>
+                    <button className="order-action-btn primary">Đánh giá</button>
+                  </>
+                )}
+                {order.status === 'Đang giao' && (
+                  <button className="order-action-btn primary">Theo dõi đơn hàng</button>
+                )}
               </div>
             </div>
-            <div className="order-actions-full">
-              <button className="btn-outline">Chi tiết</button>
-              {order.status === 'Đã giao' && (
-                <>
-                  <button className="btn-outline">Mua lại</button>
-                  <button className="btn-primary">Đánh giá</button>
-                </>
-              )}
-              {order.status === 'Đang giao' && (
-                <button className="btn-primary">Theo dõi</button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <p>Bạn chưa có đơn hàng nào</p>
+        </div>
+      )}
     </div>
   );
 
   const renderWishlist = () => (
-    <div className="wishlist-content">
+    <div className="wishlist-section">
       <h2>Sản phẩm yêu thích</h2>
-      <div className="wishlist-grid">
-        {mockWishlist.map((item) => (
-          <div key={item.id} className="wishlist-item">
-            <button className="remove-wishlist-btn">×</button>
-            <div className="wishlist-image">
-              <img src={item.image} alt={item.name} />
-              {!item.inStock && (
-                <div className="out-of-stock-overlay">Hết hàng</div>
-              )}
-            </div>
-            <div className="wishlist-info">
-              <h4>{item.name}</h4>
-              <div className="wishlist-price">
-                <span className="current-price">{item.price}</span>
-                {item.originalPrice && (
-                  <span className="original-price">{item.originalPrice}</span>
+      {mockWishlist.length > 0 ? (
+        <div className="wishlist-products">
+          {mockWishlist.map((item) => (
+            <div key={item.id} className="wishlist-product">
+              <button className="remove-item" aria-label="Xóa khỏi yêu thích">×</button>
+              <div className="product-img-wrapper">
+                <img src={item.image} alt={item.name} />
+                {!item.inStock && (
+                  <div className="out-of-stock-label">Hết hàng</div>
                 )}
               </div>
-              {item.inStock ? (
-                <button className="add-to-cart-btn" onClick={() => navigate(`/product/${item.id}`)}>
-                  Thêm vào giỏ
-                </button>
-              ) : (
-                <button className="notify-btn">Thông báo khi có hàng</button>
-              )}
+              <div className="product-details">
+                <h4 className="product-name">{item.name}</h4>
+                <div className="product-pricing">
+                  <span className="price-current">{item.price}</span>
+                  {item.originalPrice && (
+                    <span className="price-original">{item.originalPrice}</span>
+                  )}
+                </div>
+                {item.inStock ? (
+                  <button className="cart-add-btn" onClick={() => navigate(`/product/${item.id}`)}>
+                    Thêm vào giỏ hàng
+                  </button>
+                ) : (
+                  <button className="notify-stock-btn">Thông báo khi có hàng</button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <p>Bạn chưa có sản phẩm yêu thích nào</p>
+        </div>
+      )}
     </div>
   );
 
   const renderProfile = () => (
-    <div className="profile-content">
-      <h2>Thông tin cá nhân</h2>
-      <form onSubmit={handleSaveProfile} className="profile-form">
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="fullName">Họ và tên</label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              value={profileData.fullName}
-              onChange={handleProfileChange}
-              placeholder="Nhập họ và tên"
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
+    <div className="profile-section">
+      <h2>Thông tin tài khoản</h2>
+      <form onSubmit={handleSaveProfile} className="account-form">
+        <div className="field-group">
+          <label htmlFor="fullName">Họ và tên *</label>
+          <input
+            type="text"
+            id="fullName"
+            name="fullName"
+            value={profileData.fullName}
+            onChange={handleProfileChange}
+            placeholder="Nhập họ và tên"
+            required
+          />
+        </div>
+
+        <div className="field-row">
+          <div className="field-group">
+            <label htmlFor="email">Email *</label>
             <input
               type="email"
               id="email"
               name="email"
               value={profileData.email}
               onChange={handleProfileChange}
-              placeholder="Nhập email"
+              placeholder="example@email.com"
+              required
             />
           </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
+          <div className="field-group">
             <label htmlFor="phone">Số điện thoại</label>
             <input
               type="tel"
@@ -297,10 +321,13 @@ export default function AccountPage() {
               name="phone"
               value={profileData.phone}
               onChange={handleProfileChange}
-              placeholder="Nhập số điện thoại"
+              placeholder="0123456789"
             />
           </div>
-          <div className="form-group">
+        </div>
+
+        <div className="field-row">
+          <div className="field-group">
             <label htmlFor="birthday">Ngày sinh</label>
             <input
               type="date"
@@ -310,10 +337,7 @@ export default function AccountPage() {
               onChange={handleProfileChange}
             />
           </div>
-        </div>
-
-        <div className="form-row">
-          <div className="form-group">
+          <div className="field-group">
             <label htmlFor="gender">Giới tính</label>
             <select
               id="gender"
@@ -329,52 +353,78 @@ export default function AccountPage() {
           </div>
         </div>
 
-        <div className="form-actions">
-          <button type="submit" className="btn-save">Lưu thay đổi</button>
-          <button type="button" className="btn-cancel">Hủy</button>
+        <div className="button-group">
+          <button type="submit" className="save-btn">Cập nhật thông tin</button>
+          <button type="button" className="cancel-btn" onClick={() => setProfileData({
+            fullName: user?.username || '',
+            email: user?.email || '',
+            phone: '',
+            birthday: '',
+            gender: ''
+          })}>Hủy</button>
         </div>
       </form>
 
-      <div className="password-section">
-        <h3>Đổi mật khẩu</h3>
-        <form className="password-form">
-          <div className="form-group">
-            <label htmlFor="currentPassword">Mật khẩu hiện tại</label>
-            <input type="password" id="currentPassword" placeholder="Nhập mật khẩu hiện tại" />
+      <div className="password-change-section">
+        <h3>Thay đổi mật khẩu</h3>
+        <form className="password-change-form" onSubmit={(e) => { e.preventDefault(); alert('Cập nhật mật khẩu thành công!'); }}>
+          <div className="field-group">
+            <label htmlFor="currentPassword">Mật khẩu hiện tại *</label>
+            <input type="password" id="currentPassword" placeholder="Nhập mật khẩu hiện tại" required />
           </div>
-          <div className="form-group">
-            <label htmlFor="newPassword">Mật khẩu mới</label>
-            <input type="password" id="newPassword" placeholder="Nhập mật khẩu mới" />
+          <div className="field-group">
+            <label htmlFor="newPassword">Mật khẩu mới *</label>
+            <input type="password" id="newPassword" placeholder="Nhập mật khẩu mới" required />
           </div>
-          <div className="form-group">
-            <label htmlFor="confirmPassword">Xác nhận mật khẩu mới</label>
-            <input type="password" id="confirmPassword" placeholder="Nhập lại mật khẩu mới" />
+          <div className="field-group">
+            <label htmlFor="confirmPassword">Xác nhận mật khẩu *</label>
+            <input type="password" id="confirmPassword" placeholder="Nhập lại mật khẩu mới" required />
           </div>
-          <button type="submit" className="btn-save">Đổi mật khẩu</button>
+          <button type="submit" className="save-btn">Cập nhật mật khẩu</button>
         </form>
       </div>
     </div>
   );
 
   const renderAddresses = () => (
-    <div className="addresses-content">
-      <h2>Sổ địa chỉ</h2>
-      <button className="add-address-btn">+ Thêm địa chỉ mới</button>
-      
-      <div className="addresses-list">
-        <div className="address-card default">
-          <div className="address-header">
-            <h4>Địa chỉ mặc định</h4>
-            <span className="default-badge">Mặc định</span>
+    <div className="addresses-section">
+      <div className="section-title">
+        <h2>Sổ địa chỉ</h2>
+        <button className="add-new-btn">+ Thêm địa chỉ mới</button>
+      </div>
+
+      <div className="address-list">
+        <div className="address-item is-default">
+          <div className="address-header-row">
+            <div className="address-recipient">
+              <h4>Nguyễn Văn A</h4>
+              <span className="default-tag">Mặc định</span>
+            </div>
           </div>
-          <div className="address-body">
-            <p className="address-name">Nguyễn Văn A</p>
-            <p className="address-phone">0123456789</p>
-            <p className="address-detail">123 Đường ABC, Phường XYZ, Quận 1, TP. Hồ Chí Minh</p>
+          <div className="address-content">
+            <p className="recipient-phone">+84 123 456 789</p>
+            <p className="recipient-address">123 Đường ABC, Phường XYZ, Quận 1, TP. Hồ Chí Minh</p>
           </div>
-          <div className="address-actions">
-            <button className="btn-edit">Sửa</button>
-            <button className="btn-delete">Xóa</button>
+          <div className="address-action-buttons">
+            <button className="edit-btn">Chỉnh sửa</button>
+            <button className="delete-btn">Xóa</button>
+          </div>
+        </div>
+
+        <div className="address-item">
+          <div className="address-header-row">
+            <div className="address-recipient">
+              <h4>Nguyễn Văn B</h4>
+            </div>
+          </div>
+          <div className="address-content">
+            <p className="recipient-phone">+84 987 654 321</p>
+            <p className="recipient-address">456 Đường DEF, Phường LMN, Quận 3, TP. Hồ Chí Minh</p>
+          </div>
+          <div className="address-action-buttons">
+            <button className="edit-btn">Chỉnh sửa</button>
+            <button className="delete-btn">Xóa</button>
+            <button className="set-default-btn">Đặt làm mặc định</button>
           </div>
         </div>
       </div>
@@ -384,73 +434,90 @@ export default function AccountPage() {
   return (
     <Layout>
       <div className="account-page">
-        <div className="breadcrumbs">
+        <div className="page-breadcrumb">
           <div className="container">
-            <span className="breadcrumb-link" onClick={() => navigate('/home')}>Trang chủ</span>
-            <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-current">Tài khoản</span>
+            <a onClick={() => navigate('/home')} className="breadcrumb-item">Trang chủ</a>
+            <span className="breadcrumb-divider">/</span>
+            <span className="breadcrumb-active">Tài khoản</span>
           </div>
         </div>
 
-        <div className="account-container">
+        <div className="account-wrapper">
           <div className="container">
-            <div className="account-layout">
-              <aside className="account-sidebar">
-                <div className="user-info">
-                  <div className="user-avatar">
+            <div className="account-grid">
+              <aside className="account-menu">
+                <div className="user-profile">
+                  <div className="user-avatar-circle">
                     {user?.username?.charAt(0).toUpperCase()}
                   </div>
-                  <div className="user-details">
-                    <h3>{user?.username}</h3>
-                    <p>{user?.email}</p>
+                  <div className="user-info-text">
+                    <h3 className="user-name">{user?.username}</h3>
+                    <p className="user-email">{user?.email}</p>
                   </div>
                 </div>
 
-                <nav className="account-nav">
+                <nav className="menu-nav">
                   <button
-                    className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('dashboard')}
+                    className={`menu-link ${activeTab === 'overview' ? 'is-active' : ''}`}
+                    onClick={() => setActiveTab('overview')}
                   >
-                    <span className="nav-icon">🏠</span>
+                    <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                      <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                    </svg>
                     <span>Tổng quan</span>
                   </button>
                   <button
-                    className={`nav-item ${activeTab === 'orders' ? 'active' : ''}`}
+                    className={`menu-link ${activeTab === 'orders' ? 'is-active' : ''}`}
                     onClick={() => setActiveTab('orders')}
                   >
-                    <span className="nav-icon">📦</span>
+                    <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
                     <span>Đơn hàng</span>
                   </button>
                   <button
-                    className={`nav-item ${activeTab === 'wishlist' ? 'active' : ''}`}
+                    className={`menu-link ${activeTab === 'wishlist' ? 'is-active' : ''}`}
                     onClick={() => setActiveTab('wishlist')}
                   >
-                    <span className="nav-icon">❤️</span>
+                    <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
                     <span>Yêu thích</span>
                   </button>
                   <button
-                    className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+                    className={`menu-link ${activeTab === 'profile' ? 'is-active' : ''}`}
                     onClick={() => setActiveTab('profile')}
                   >
-                    <span className="nav-icon">👤</span>
-                    <span>Thông tin</span>
+                    <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                    <span>Thông tin tài khoản</span>
                   </button>
                   <button
-                    className={`nav-item ${activeTab === 'addresses' ? 'active' : ''}`}
+                    className={`menu-link ${activeTab === 'addresses' ? 'is-active' : ''}`}
                     onClick={() => setActiveTab('addresses')}
                   >
-                    <span className="nav-icon">📍</span>
-                    <span>Địa chỉ</span>
+                    <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span>Sổ địa chỉ</span>
                   </button>
-                  <button className="nav-item" onClick={handleLogout}>
-                    <span className="nav-icon">🚪</span>
+                  <button className="menu-link logout-link" onClick={handleLogout}>
+                    <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                      <polyline points="16 17 21 12 16 7"></polyline>
+                      <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
                     <span>Đăng xuất</span>
                   </button>
                 </nav>
               </aside>
 
-              <main className="account-main">
-                {activeTab === 'dashboard' && renderDashboard()}
+              <main className="account-content">
+                {activeTab === 'overview' && renderOverview()}
                 {activeTab === 'orders' && renderOrders()}
                 {activeTab === 'wishlist' && renderWishlist()}
                 {activeTab === 'profile' && renderProfile()}

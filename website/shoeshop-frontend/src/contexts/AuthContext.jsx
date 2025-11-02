@@ -13,14 +13,27 @@ export const AuthProvider = ({ children }) => {
   // Check authentication status on mount
   useEffect(() => {
     const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
-    if (token) {
+    const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
+
+    if (token && storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (error) {
+        console.error('Invalid stored user data:', error);
+        localStorage.removeItem(STORAGE_KEYS.TOKEN);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+      }
+    } else if (token) {
       try {
         const decoded = jwtDecode(token);
-        setUser({
+        const userData = {
           username: decoded.sub || decoded.username,
           role: decoded.role || 'USER',
           email: decoded.email
-        });
+        };
+        setUser(userData);
+        localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
       } catch (error) {
         console.error('Invalid token:', error);
         localStorage.removeItem(STORAGE_KEYS.TOKEN);
@@ -45,11 +58,13 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem(STORAGE_KEYS.TOKEN, token);
     try {
       const decoded = jwtDecode(token);
-      setUser({
+      const userData = {
         username: decoded.sub || decoded.username,
         role: decoded.role || 'USER',
         email: decoded.email
-      });
+      };
+      setUser(userData);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
     } catch (error) {
       console.error('Invalid token:', error);
     }
@@ -58,6 +73,7 @@ export const AuthProvider = ({ children }) => {
   // Logout function
   const logout = () => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.USER);
     setUser(null);
   };
 

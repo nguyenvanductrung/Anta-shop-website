@@ -1,15 +1,25 @@
 import React from 'react';
+import { useAuth } from '../contexts';
 import './AdminSidebar.css';
-import { ADMIN_MENU_ITEMS } from '../constants';
 
 export default function AdminSidebar({ activeTab, setActiveTab }) {
-  const menuItems = ADMIN_MENU_ITEMS;
+  const { user } = useAuth();
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Bảng Điều Khiển', icon: '📊' },
+    { id: 'products', label: 'Sản Phẩm', icon: '🛒' },
+    { id: 'shipping', label: 'Vận Chuyển', icon: '📦' },
+    { id: 'messages', label: 'Tin Nhắn', icon: '💬', badge: 49 },
+    { id: 'notifications', label: 'Thông Báo', icon: '🔔' },
+    { id: 'settings', label: 'Cài Đặt', icon: '⚙️' }
+  ];
 
   return (
     <div className="admin-sidebar">
       <div className="sidebar-header">
-        <div className="anta-logo">
-          <span className="anta-red">ANTA</span>
+        <div className="sidebar-logo">
+          <span className="logo-text">ANTA</span>
+          <span className="logo-subtitle">ADMIN</span>
         </div>
       </div>
 
@@ -17,13 +27,13 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
         {menuItems.map((item) => (
           <button
             key={item.id}
-            className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
+            className={`sidebar-nav-item ${activeTab === item.id ? 'active' : ''}`}
             onClick={() => setActiveTab(item.id)}
           >
-            <span className="nav-icon">{item.icon}</span>
-            <span className="nav-label">{item.label}</span>
+            <span className="nav-item-icon">{item.icon}</span>
+            <span className="nav-item-label">{item.label}</span>
             {item.badge && (
-              <span className="nav-badge">{item.badge}</span>
+              <span className="nav-item-badge">{item.badge}</span>
             )}
           </button>
         ))}
@@ -32,16 +42,12 @@ export default function AdminSidebar({ activeTab, setActiveTab }) {
       <div className="sidebar-footer">
         <div className="user-profile">
           <div className="user-avatar">
-            <img 
-              src="https://via.placeholder.com/40x40?text=👤" 
-              alt="Admin Avatar"
-            />
+            <span className="user-avatar-icon">👤</span>
           </div>
           <div className="user-info">
-            <div className="user-name">Admin</div>
-            <div className="user-store">Anta Store</div>
+            <div className="user-name">{user?.name || 'Admin'}</div>
+            <div className="user-role">Quản Trị Viên</div>
           </div>
-          <button className="logout-btn">🚪</button>
         </div>
       </div>
     </div>

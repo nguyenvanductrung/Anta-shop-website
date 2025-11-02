@@ -37,12 +37,13 @@
   cursor: pointer;
   padding: 8px;
   border-radius: 6px;
-  transition: background-color 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-toggle:hover {
   background-color: #f7f7f7;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: scale(1.05);
 }
 
 .toggle-bar {
@@ -78,14 +79,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: opacity 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   height: 100%;
   padding: 0 1px;
 }
 
 .brand-logo:hover {
   opacity: 0.85;
-  transform: scale(1.02);
+  transform: scale(1.05);
 }
 
 .brand-logo img {
@@ -141,8 +142,25 @@
   padding: 0 12px;
   height: 100%;
   cursor: pointer;
-  transition: color 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  position: relative;
+}
+
+.nav-item-link::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.nav-item-link:hover::after {
+  transform: scaleX(1);
 }
 
 .nav-item-link:hover {
@@ -156,11 +174,11 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
   white-space: nowrap;
-  transition: color 150ms ease;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .nav-item-link:hover .nav-item-text {
-  color: var(--color-dark);
+  color: var(--color-primary);
 }
 
 .nav-item-text.text-highlight {
@@ -172,13 +190,13 @@
   display: flex;
   align-items: center;
   color: #111111;
-  transition: transform 150ms ease, color 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-top: 1px;
 }
 
 .navigation-item:hover .nav-chevron {
   transform: rotate(180deg);
-  color: var(--color-dark);
+  color: var(--color-primary);
 }
 
 /* Navigation Dropdown */
@@ -242,15 +260,16 @@
 .column-item span {
   font-size: 13px;
   color: #6b6b6b;
-  transition: color 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: block;
   padding: 3px 0;
   cursor: pointer;
 }
 
 .column-item span:hover {
-  color: var(--color-dark);
-  padding-left: 4px;
+  color: var(--color-primary);
+  padding-left: 6px;
+  font-weight: 600;
 }
 
 /* Header Right - Action Icons */
@@ -275,14 +294,19 @@
   border-radius: 6px;
   cursor: pointer;
   color: #111111;
-  transition: all 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
 }
 
 .header-action:hover {
-  background-color: #f7f7f7;
-  color: var(--color-dark);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  background-color: rgba(215, 0, 16, 0.08);
+  color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.header-action:active {
+  transform: translateY(0);
 }
 
 .header-action svg {
@@ -383,14 +407,15 @@
   cursor: pointer;
   color: #111111;
   border-radius: 6px;
-  transition: all 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 0;
 }
 
 .panel-close:hover {
-  background-color: #f7f7f7;
-  color: var(--color-dark);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  background-color: rgba(215, 0, 16, 0.1);
+  color: var(--color-primary);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: rotate(90deg);
 }
 
 .panel-navigation {
@@ -411,13 +436,14 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .panel-nav-text:hover {
-  background-color: #f7f7f7;
-  color: var(--color-dark);
-  padding-left: 28px;
+  background-color: rgba(215, 0, 16, 0.05);
+  color: var(--color-primary);
+  padding-left: 32px;
+  font-weight: 700;
 }
 
 .panel-nav-text.text-highlight {
@@ -455,13 +481,18 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   cursor: pointer;
-  transition: all 200ms ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .auth-button:hover {
   background: #231f20;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(35, 31, 32, 0.3);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(35, 31, 32, 0.4);
+}
+
+.auth-button:active {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(35, 31, 32, 0.3);
 }
 
 /* Responsive Breakpoints */
