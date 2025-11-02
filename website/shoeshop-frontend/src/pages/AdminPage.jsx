@@ -169,7 +169,7 @@ export default function AdminPage() {
                     </button>
                     <button className="action-btn" onClick={() => setActiveTab('messages')}>
                       <span className="action-btn-icon">💬</span>
-                      <span>Tin Nh��n</span>
+                      <span>Tin Nhắn</span>
                     </button>
                   </div>
                 </div>
@@ -193,7 +193,7 @@ export default function AdminPage() {
         return (
           <div className="admin-content-section">
             <div className="section-header">
-              <h1 className="section-title-main">Tin Nh���n</h1>
+              <h1 className="section-title-main">Tin Nhắn</h1>
             </div>
             <div className="empty-state">
               <span className="empty-state-icon">💬</span>
@@ -278,7 +278,7 @@ export default function AdminPage() {
                   </label>
                   <label className="setting-option">
                     <input type="checkbox" />
-                    <span>Nhận email t���ng kết hàng tuần</span>
+                    <span>Nhận email tổng kết hàng tuần</span>
                   </label>
                 </div>
               </div>
