@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { DataSyncProvider, CartProvider, AuthProvider, OrderProvider, WishlistProvider, UserDataProvider } from "./contexts";
+import { ToastProvider } from "./components/ToastContainer";
 import { ProtectedRoute } from "./components";
 import { ROUTES } from "./constants";
 import {
@@ -23,13 +24,14 @@ import {
 
 function App() {
   return (
-    <DataSyncProvider>
-      <AuthProvider>
-        <UserDataProvider>
-          <OrderProvider>
-            <WishlistProvider>
-              <CartProvider>
-                <Router>
+    <ToastProvider>
+      <DataSyncProvider>
+        <AuthProvider>
+          <UserDataProvider>
+            <OrderProvider>
+              <WishlistProvider>
+                <CartProvider>
+                  <Router>
                   <Routes>
                     <Route path="/" element={<Navigate to={ROUTES.HOME} />} />
                     <Route path={ROUTES.LOGIN} element={<Login />} />
@@ -57,13 +59,14 @@ function App() {
                     <Route path="/exclusive" element={<ProductListPage />} />
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
-                </Router>
-              </CartProvider>
-            </WishlistProvider>
-          </OrderProvider>
-        </UserDataProvider>
-      </AuthProvider>
-    </DataSyncProvider>
+                  </Router>
+                </CartProvider>
+              </WishlistProvider>
+            </OrderProvider>
+          </UserDataProvider>
+        </AuthProvider>
+      </DataSyncProvider>
+    </ToastProvider>
   );
 }
 

@@ -9,7 +9,7 @@ let mockProducts = [
     image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=400',
     price: 2990000,
     quantity: 45,
-    category: 'Giày Bóng Rổ',
+    category: 'Giày B��ng Rổ',
     rating: 5,
     status: 'active',
     sales: 128,
@@ -39,7 +39,7 @@ let mockProducts = [
     rating: 4,
     status: 'active',
     sales: 56,
-    description: 'Giày chạy bộ công nghệ GT',
+    description: 'Giày chạy bộ công ngh�� GT',
     createdAt: new Date('2024-02-01').toISOString()
   },
   {
@@ -70,7 +70,9 @@ let mockProducts = [
   }
 ];
 
-let mockOrders = [
+const ADMIN_ORDERS_KEY = 'anta_admin_orders';
+
+const DEFAULT_ORDERS = [
   {
     id: 1,
     customer: 'Nguyễn Văn A',
@@ -149,6 +151,30 @@ let mockOrders = [
   }
 ];
 
+const getAdminOrders = () => {
+  try {
+    const stored = localStorage.getItem(ADMIN_ORDERS_KEY);
+    return stored ? JSON.parse(stored) : DEFAULT_ORDERS;
+  } catch (error) {
+    console.error('Error loading admin orders from localStorage:', error);
+    return DEFAULT_ORDERS;
+  }
+};
+
+const saveAdminOrders = (orders) => {
+  try {
+    localStorage.setItem(ADMIN_ORDERS_KEY, JSON.stringify(orders));
+  } catch (error) {
+    console.error('Error saving admin orders to localStorage:', error);
+  }
+};
+
+if (!localStorage.getItem(ADMIN_ORDERS_KEY)) {
+  saveAdminOrders(DEFAULT_ORDERS);
+}
+
+let mockOrders = getAdminOrders();
+
 let mockMessages = [
   {
     id: 1,
@@ -218,7 +244,7 @@ let mockNotifications = [
     type: 'order',
     icon: '✓',
     title: 'Đơn hàng #2197139TYQPWO đã hoàn thành',
-    message: 'Khách hàng đã xác nhận nhận hàng',
+    message: 'Khách hàng đã xác nhận nh��n hàng',
     time: '1 ngày trước',
     date: new Date(Date.now() - 86400000).toISOString(),
     read: true
@@ -358,10 +384,11 @@ export const adminOrderService = {
   getOrders: async (filters = {}) => {
     await delay();
     try {
+      mockOrders = getAdminOrders();
       let filtered = [...mockOrders];
 
       if (filters.search) {
-        filtered = filtered.filter(o => 
+        filtered = filtered.filter(o =>
           o.orderNumber.toLowerCase().includes(filters.search.toLowerCase()) ||
           o.customer.toLowerCase().includes(filters.search.toLowerCase())
         );
@@ -377,9 +404,65 @@ export const adminOrderService = {
     }
   },
 
+  // Create new order (from checkout)
+  createOrder: async (orderData) => {
+    await delay();
+    try {
+      mockOrders = getAdminOrders();
+      const orderNumber = orderData.orderNumber || `ANT${Date.now().toString().slice(-8)}`;
+      const newOrder = {
+        id: mockOrders.length + 1,
+        customer: orderData.customer.fullName,
+        orderNumber: orderNumber,
+        date: new Date().toISOString().split('T')[0],
+        orderDate: orderData.orderDate || new Date().toISOString(),
+        total: orderData.total,
+        subtotal: orderData.subtotal,
+        discount: orderData.discount,
+        shipping: orderData.shipping,
+        promoCode: orderData.promoCode,
+        status: 'needs-shipping',
+        paymentMethod: orderData.customer.paymentMethod,
+        shippingMethod: orderData.customer.shippingMethod,
+        customerInfo: orderData.customer,
+        products: orderData.items.map(item => ({
+          id: item.id,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color,
+          dueDate: 'Chưa xác định',
+          shippingService: 'Chờ xử lý'
+        })),
+        // Add items alias for OrderSuccessPage compatibility
+        items: orderData.items.map(item => ({
+          id: item.id,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color
+        }))
+      };
+
+      // Ensure customer field is object for OrderSuccessPage
+      newOrder.customer = orderData.customer;
+
+      mockOrders.unshift(newOrder);
+      saveAdminOrders(mockOrders);
+      return { success: true, data: newOrder, message: 'Đơn hàng đã được tạo thành công!' };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
+
   // Get single order
   getOrder: async (id) => {
     await delay();
+    mockOrders = getAdminOrders();
     const order = mockOrders.find(o => o.id === parseInt(id));
     if (order) {
       return { success: true, data: order };
@@ -391,9 +474,11 @@ export const adminOrderService = {
   updateOrderStatus: async (id, status) => {
     await delay();
     try {
+      mockOrders = getAdminOrders();
       const index = mockOrders.findIndex(o => o.id === parseInt(id));
       if (index !== -1) {
         mockOrders[index].status = status;
+        saveAdminOrders(mockOrders);
         return { success: true, data: mockOrders[index], message: 'Cập nhật trạng thái thành công!' };
       }
       return { success: false, error: 'Không tìm thấy đơn hàng' };
@@ -406,13 +491,15 @@ export const adminOrderService = {
   arrangeShipping: async (orderId, shippingData) => {
     await delay();
     try {
+      mockOrders = getAdminOrders();
       const index = mockOrders.findIndex(o => o.id === parseInt(orderId));
       if (index !== -1) {
         mockOrders[index].status = 'sent';
         mockOrders[index].shippingInfo = shippingData;
+        saveAdminOrders(mockOrders);
         return { success: true, data: mockOrders[index], message: 'Sắp xếp giao hàng thành công!' };
       }
-      return { success: false, error: 'Không tìm thấy đơn h��ng' };
+      return { success: false, error: 'Không tìm thấy đơn hàng' };
     } catch (error) {
       return { success: false, error: error.message };
     }

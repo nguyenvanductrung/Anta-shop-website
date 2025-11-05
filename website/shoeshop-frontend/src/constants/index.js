@@ -85,7 +85,9 @@ export const API_ENDPOINTS = {
 export const STORAGE_KEYS = {
   TOKEN: 'anta_token',
   CART: 'anta_cart',
-  USER: 'anta_user'
+  USER: 'anta_user',
+  USER_ORDERS: 'anta_user_orders',
+  ADMIN_ORDERS: 'anta_admin_orders'
 };
 
 export const USER_ROLES = {
