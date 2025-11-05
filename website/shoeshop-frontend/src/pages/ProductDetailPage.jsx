@@ -130,7 +130,8 @@ export default function ProductDetailPage() {
     addToCart({
       id: product.id,
       name: product.name,
-      price: formatPrice(product.price),
+      price: product.price,
+      originalPrice: product.originalPrice,
       image: product.images[0],
       size: selectedSize,
       color: selectedColor,

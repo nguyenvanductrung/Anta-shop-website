@@ -19,12 +19,21 @@ export default function ProductGrid({ title, products = [] }) {
 
   const handleAddToCart = (e, product) => {
     e.stopPropagation();
-    
+
+    const parsePrice = (price) => {
+      if (typeof price === 'number') return price;
+      if (typeof price === 'string') {
+        const numericValue = parseFloat(price.replace(/[^\d]/g, ''));
+        return isNaN(numericValue) ? 0 : numericValue;
+      }
+      return 0;
+    };
+
     const cartItem = {
       id: product.id,
       name: product.name,
-      price: parseFloat(product.price.replace(/[^\d]/g, '')),
-      originalPrice: product.originalPrice ? parseFloat(product.originalPrice.replace(/[^\d]/g, '')) : null,
+      price: parsePrice(product.price),
+      originalPrice: product.originalPrice ? parsePrice(product.originalPrice) : null,
       image: product.image,
       quantity: 1,
       size: product.sizes ? product.sizes[0] : null,
@@ -32,13 +41,13 @@ export default function ProductGrid({ title, products = [] }) {
     };
 
     addToCart(cartItem);
-    
+
     // Show confirmation
     const btn = e.currentTarget;
     const originalText = btn.textContent;
     btn.textContent = '✓ ĐÃ THÊM';
     btn.style.background = 'var(--color-success)';
-    
+
     setTimeout(() => {
       btn.textContent = originalText;
       btn.style.background = '';
