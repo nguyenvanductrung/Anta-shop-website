@@ -153,8 +153,77 @@ const DEFAULT_ORDERS = [
 
 const getAdminOrders = () => {
   try {
-    const stored = localStorage.getItem(ADMIN_ORDERS_KEY);
-    return stored ? JSON.parse(stored) : DEFAULT_ORDERS;
+    // Get admin orders
+    const adminStored = localStorage.getItem(ADMIN_ORDERS_KEY);
+    let adminOrders = adminStored ? JSON.parse(adminStored) : [...DEFAULT_ORDERS];
+
+    // Get user orders and merge them
+    const USER_ORDERS_KEY = 'anta_user_orders';
+    const userStored = localStorage.getItem(USER_ORDERS_KEY);
+
+    if (userStored) {
+      try {
+        const userOrders = JSON.parse(userStored);
+
+        // Convert user orders to admin format and merge
+        userOrders.forEach(userOrder => {
+          // Check if this order already exists in admin orders
+          const existingIndex = adminOrders.findIndex(ao =>
+            ao.orderNumber === userOrder.id ||
+            ao.id === userOrder.id ||
+            ao.orderNumber === userOrder.orderNumber
+          );
+
+          // Map user order status to admin status
+          let adminStatus = 'needs-shipping';
+          const userStatus = userOrder.status?.toLowerCase() || '';
+
+          if (userStatus.includes('hủy') || userStatus === 'cancelled') {
+            adminStatus = 'cancelled';
+          } else if (userStatus.includes('giao') && !userStatus.includes('đang')) {
+            adminStatus = 'completed';
+          } else if (userStatus.includes('đang giao') || userStatus === 'shipping') {
+            adminStatus = 'sent';
+          } else if (userStatus.includes('đang xử lý') || userStatus === 'processing') {
+            adminStatus = 'needs-shipping';
+          }
+
+          const adminOrderFormat = {
+            id: existingIndex !== -1 ? adminOrders[existingIndex].id : adminOrders.length + 1,
+            customer: userOrder.customer?.fullName || 'Khách hàng',
+            orderNumber: userOrder.orderNumber || userOrder.id,
+            date: new Date(userOrder.date || userOrder.createdAt).toISOString().split('T')[0],
+            orderDate: userOrder.createdAt || userOrder.date,
+            total: userOrder.total || userOrder.totalAmount || 0,
+            status: adminStatus,
+            products: (userOrder.products || []).map(p => ({
+              id: p.id,
+              name: p.name,
+              image: p.image,
+              price: p.price,
+              quantity: p.quantity || 1,
+              dueDate: adminStatus === 'completed' ? 'Đã hoàn thành' :
+                       adminStatus === 'sent' ? 'Đang giao hàng' :
+                       adminStatus === 'cancelled' ? 'Đã hủy' : 'Chưa xác định',
+              shippingService: adminStatus === 'cancelled' ? 'Đã hủy' :
+                              adminStatus === 'completed' ? 'Đã giao' : 'Chờ xử lý'
+            }))
+          };
+
+          if (existingIndex !== -1) {
+            // Update existing order
+            adminOrders[existingIndex] = { ...adminOrders[existingIndex], ...adminOrderFormat };
+          } else {
+            // Add new order
+            adminOrders.push(adminOrderFormat);
+          }
+        });
+      } catch (error) {
+        console.error('Error merging user orders:', error);
+      }
+    }
+
+    return adminOrders;
   } catch (error) {
     console.error('Error loading admin orders from localStorage:', error);
     return DEFAULT_ORDERS;
@@ -222,7 +291,7 @@ let mockNotifications = [
   {
     id: 1,
     type: 'order',
-    icon: '🔔',
+    icon: '��',
     title: 'Đơn hàng mới #2201223FJAOQ',
     message: 'Bạn có 1 đơn hàng mới cần xử lý',
     time: '5 phút trước',
@@ -384,19 +453,27 @@ export const adminOrderService = {
   getOrders: async (filters = {}) => {
     await delay();
     try {
+      // Always reload from localStorage to get fresh data
       mockOrders = getAdminOrders();
       let filtered = [...mockOrders];
 
       if (filters.search) {
         filtered = filtered.filter(o =>
-          o.orderNumber.toLowerCase().includes(filters.search.toLowerCase()) ||
-          o.customer.toLowerCase().includes(filters.search.toLowerCase())
+          o.orderNumber?.toLowerCase().includes(filters.search.toLowerCase()) ||
+          o.customer?.toLowerCase().includes(filters.search.toLowerCase())
         );
       }
 
       if (filters.status && filters.status !== 'all') {
         filtered = filtered.filter(o => o.status === filters.status);
       }
+
+      // Sort by date (newest first)
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.orderDate || a.date);
+        const dateB = new Date(b.orderDate || b.date);
+        return dateB - dateA;
+      });
 
       return { success: true, data: filtered };
     } catch (error) {
@@ -478,7 +555,62 @@ export const adminOrderService = {
       const index = mockOrders.findIndex(o => o.id === parseInt(id));
       if (index !== -1) {
         mockOrders[index].status = status;
+
+        // Update product status as well
+        if (mockOrders[index].products) {
+          mockOrders[index].products.forEach(p => {
+            if (status === 'cancelled') {
+              p.dueDate = 'Đã hủy';
+              p.shippingService = 'Đã hủy';
+            } else if (status === 'completed') {
+              p.dueDate = 'Đã hoàn thành';
+              p.shippingService = 'Đã giao';
+            } else if (status === 'sent') {
+              p.dueDate = 'Đang giao hàng';
+              p.shippingService = p.shippingService || 'Đang giao';
+            }
+          });
+        }
+
         saveAdminOrders(mockOrders);
+
+        // Sync with user orders
+        try {
+          const USER_ORDERS_KEY = 'anta_user_orders';
+          const userOrders = JSON.parse(localStorage.getItem(USER_ORDERS_KEY) || '[]');
+          const userOrderIndex = userOrders.findIndex(uo =>
+            uo.orderNumber === mockOrders[index].orderNumber ||
+            uo.id === mockOrders[index].orderNumber ||
+            uo.orderNumber === mockOrders[index].id
+          );
+
+          if (userOrderIndex !== -1) {
+            // Map admin status to user status
+            let userStatus = userOrders[userOrderIndex].status;
+            if (status === 'cancelled') {
+              userStatus = 'Đã hủy';
+            } else if (status === 'completed') {
+              userStatus = 'Đã giao';
+            } else if (status === 'sent') {
+              userStatus = 'Đang giao';
+            } else if (status === 'needs-shipping') {
+              userStatus = 'Đang xử lý';
+            }
+
+            userOrders[userOrderIndex].status = userStatus;
+            localStorage.setItem(USER_ORDERS_KEY, JSON.stringify(userOrders));
+
+            // Trigger storage event for user orders
+            window.dispatchEvent(new StorageEvent('storage', {
+              key: USER_ORDERS_KEY,
+              newValue: JSON.stringify(userOrders),
+              url: window.location.href
+            }));
+          }
+        } catch (error) {
+          console.error('Error syncing with user orders:', error);
+        }
+
         return { success: true, data: mockOrders[index], message: 'Cập nhật trạng thái thành công!' };
       }
       return { success: false, error: 'Không tìm thấy đơn hàng' };
@@ -496,7 +628,35 @@ export const adminOrderService = {
       if (index !== -1) {
         mockOrders[index].status = 'sent';
         mockOrders[index].shippingInfo = shippingData;
+
+        // Update product shipping info
+        if (mockOrders[index].products) {
+          mockOrders[index].products.forEach(p => {
+            p.dueDate = 'Đang giao hàng';
+            p.shippingService = shippingData.service || 'J&T Express';
+          });
+        }
+
         saveAdminOrders(mockOrders);
+
+        // Sync with user orders
+        try {
+          const USER_ORDERS_KEY = 'anta_user_orders';
+          const userOrders = JSON.parse(localStorage.getItem(USER_ORDERS_KEY) || '[]');
+          const userOrderIndex = userOrders.findIndex(uo =>
+            uo.orderNumber === mockOrders[index].orderNumber ||
+            uo.id === mockOrders[index].orderNumber ||
+            uo.orderNumber === mockOrders[index].id
+          );
+
+          if (userOrderIndex !== -1) {
+            userOrders[userOrderIndex].status = 'Đang giao';
+            localStorage.setItem(USER_ORDERS_KEY, JSON.stringify(userOrders));
+          }
+        } catch (error) {
+          console.error('Error syncing with user orders:', error);
+        }
+
         return { success: true, data: mockOrders[index], message: 'Sắp xếp giao hàng thành công!' };
       }
       return { success: false, error: 'Không tìm thấy đơn hàng' };

@@ -23,6 +23,32 @@ export default function ShippingManagement({ onDataChange }) {
     loadOrders();
   }, []);
 
+  useEffect(() => {
+    const handleOrderUpdate = (event) => {
+      loadOrders();
+    };
+
+    const handleOrderCancelled = (event) => {
+      loadOrders();
+    };
+
+    const handleStorageChange = (e) => {
+      if (e.key === 'anta_admin_orders') {
+        loadOrders();
+      }
+    };
+
+    window.addEventListener('data:orders', handleOrderUpdate);
+    window.addEventListener('orderCancelled', handleOrderCancelled);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('data:orders', handleOrderUpdate);
+      window.removeEventListener('orderCancelled', handleOrderCancelled);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
   const loadOrders = async () => {
     setLoading(true);
     const result = await adminService.orders.getOrders();
@@ -229,62 +255,72 @@ export default function ShippingManagement({ onDataChange }) {
                 </div>
                 
                 <div className="order-products-list">
-                  {order.products.map((product) => (
-                    <div key={product.id} className="order-product-row">
+                  {(order.products && order.products.length > 0) ? (
+                    order.products.map((product, index) => (
+                      <div key={`${product.id}-${index}`} className="order-product-row">
+                        <div className="product-main-info">
+                          <img
+                            src={product.image || 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=400'}
+                            alt={product.name}
+                            className="product-order-thumbnail"
+                          />
+                          <div className="product-order-details">
+                            <h4 className="product-order-name">{product.name}</h4>
+                            <p className="product-order-price">
+                              {formatCurrency(product.price)} × {product.quantity || 1}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="product-shipping-info">
+                          <div className="shipping-status-section">
+                            <span className="shipping-status-label">Trạng thái:</span>
+                            <span className={`shipping-status-text ${order.status}`}>
+                              {product.dueDate || 'Chưa xác định'}
+                            </span>
+                          </div>
+                          <div className="shipping-service-section">
+                            <span className="shipping-service-icon">🚚</span>
+                            <span className="shipping-service-name">{product.shippingService || 'Chờ xử lý'}</span>
+                          </div>
+                        </div>
+
+                        <div className="product-quantity-section">
+                          <span className="quantity-label">SL:</span>
+                          <span className="quantity-value">{product.quantity || 1}</span>
+                        </div>
+
+                        <div className="product-actions-section">
+                          {order.status === 'needs-shipping' && (
+                            <button
+                              className="arrange-shipping-button"
+                              onClick={() => handleArrangeShipping(order.id)}
+                            >
+                              <span className="btn-icon">📦</span>
+                              Sắp xếp giao hàng
+                            </button>
+                          )}
+                          {order.status === 'sent' && (
+                            <button
+                              className="complete-order-button"
+                              onClick={() => handleUpdateStatus(order.id, 'completed')}
+                            >
+                              <span className="btn-icon">✓</span>
+                              Hoàn thành
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="order-product-row">
                       <div className="product-main-info">
-                        <img 
-                          src={product.image} 
-                          alt={product.name} 
-                          className="product-order-thumbnail"
-                        />
                         <div className="product-order-details">
-                          <h4 className="product-order-name">{product.name}</h4>
-                          <p className="product-order-price">
-                            {formatCurrency(product.price)} × {product.quantity}
-                          </p>
+                          <p className="product-order-name">Không có thông tin sản phẩm</p>
                         </div>
-                      </div>
-                      
-                      <div className="product-shipping-info">
-                        <div className="shipping-status-section">
-                          <span className="shipping-status-label">Trạng thái:</span>
-                          <span className={`shipping-status-text ${order.status}`}>
-                            {product.dueDate}
-                          </span>
-                        </div>
-                        <div className="shipping-service-section">
-                          <span className="shipping-service-icon">🚚</span>
-                          <span className="shipping-service-name">{product.shippingService}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="product-quantity-section">
-                        <span className="quantity-label">SL:</span>
-                        <span className="quantity-value">{product.quantity}</span>
-                      </div>
-                      
-                      <div className="product-actions-section">
-                        {order.status === 'needs-shipping' && (
-                          <button 
-                            className="arrange-shipping-button"
-                            onClick={() => handleArrangeShipping(order.id)}
-                          >
-                            <span className="btn-icon">📦</span>
-                            Sắp xếp giao hàng
-                          </button>
-                        )}
-                        {order.status === 'sent' && (
-                          <button 
-                            className="complete-order-button"
-                            onClick={() => handleUpdateStatus(order.id, 'completed')}
-                          >
-                            <span className="btn-icon">✓</span>
-                            Hoàn thành
-                          </button>
-                        )}
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             ))

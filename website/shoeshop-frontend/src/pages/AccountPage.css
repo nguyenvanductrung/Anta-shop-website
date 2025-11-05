@@ -695,6 +695,24 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
+.order-action-btn.cancel {
+  background: #fff;
+  color: #dc2626;
+  border: 2px solid #fee2e2;
+}
+
+.order-action-btn.cancel:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+}
+
+.order-action-btn.cancel:active {
+  background: #fee2e2;
+  transform: translateY(0);
+}
+
 .wishlist-products {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

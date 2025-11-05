@@ -59,9 +59,21 @@ export const OrderProvider = ({ children }) => {
     try {
       await orderService.cancelOrder(id);
       await loadOrders();
+
+      // Emit sync event for real-time updates
       if (dataSync) {
-        dataSync.emitOrdersUpdate({ action: 'cancel', orderId: id });
+        dataSync.emitOrdersUpdate({
+          action: 'cancel',
+          orderId: id,
+          timestamp: Date.now()
+        });
       }
+
+      // Also emit a custom event for admin dashboard
+      window.dispatchEvent(new CustomEvent('orderCancelled', {
+        detail: { orderId: id, timestamp: Date.now() }
+      }));
+
       return true;
     } catch (err) {
       console.error('Error canceling order:', err);

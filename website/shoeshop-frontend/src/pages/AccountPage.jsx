@@ -10,7 +10,7 @@ export default function AccountPage() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const { addToCart } = useCart();
   
-  const { orders, getOrder, getOrdersByStatus, totalOrders } = useOrders();
+  const { orders, getOrder, getOrdersByStatus, totalOrders, cancelOrder } = useOrders();
   const { wishlist, removeFromWishlist: removeFromWishlistContext, totalWishlistItems } = useWishlist();
   const { 
     profile, 
@@ -183,7 +183,7 @@ export default function AccountPage() {
         await addAddress(addressForm);
       }
       closeAddressModal();
-      alert(editingAddress ? 'Cập nhật địa chỉ thành công!' : 'Thêm địa chỉ thành công!');
+      alert(editingAddress ? 'Cập nh���t địa chỉ thành công!' : 'Thêm địa chỉ thành công!');
     } catch (error) {
       alert('Có lỗi xảy ra: ' + error.message);
     } finally {
@@ -283,6 +283,31 @@ export default function AccountPage() {
   const handleTrackOrder = (order) => {
     setTrackingOrder(order);
     setShowTrackingModal(true);
+  };
+
+  const handleCancelOrder = async (order) => {
+    const confirmCancel = window.confirm(
+      `Bạn có chắc chắn muốn hủy đơn hàng #${order.id}?\n\nLưu ý: Hành động này không thể hoàn tác.`
+    );
+
+    if (!confirmCancel) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await cancelOrder(order.id);
+      alert('Hủy đơn hàng thành công!');
+    } catch (error) {
+      alert('Có lỗi xảy ra khi hủy đơn hàng: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const canCancelOrder = (order) => {
+    const status = order.status.toLowerCase();
+    return status === 'đang xử lý' || status === 'processing' || status === 'chờ xử lý';
   };
 
   const handleNavigateToProduct = (productId) => {
@@ -460,6 +485,9 @@ export default function AccountPage() {
                   {(order.status === 'Đang giao' || order.status === 'SHIPPING') && (
                     <button className="order-action-btn primary" onClick={() => handleTrackOrder(order)}>Theo dõi đơn hàng</button>
                   )}
+                  {canCancelOrder(order) && (
+                    <button className="order-action-btn cancel" onClick={() => handleCancelOrder(order)}>Hủy đơn hàng</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -508,7 +536,7 @@ export default function AccountPage() {
         </div>
       ) : (
         <div className="empty-state">
-          <p>Bạn chưa có sản phẩm yêu thích nào</p>
+          <p>Bạn chưa có sản ph��m yêu thích nào</p>
         </div>
       )}
     </div>

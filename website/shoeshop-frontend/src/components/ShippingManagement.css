@@ -539,6 +539,33 @@
   box-shadow: 0 8px 24px rgba(215, 0, 16, 0.4);
 }
 
+.complete-order-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.complete-order-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(5, 150, 105, 0.4);
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .order-product-row {

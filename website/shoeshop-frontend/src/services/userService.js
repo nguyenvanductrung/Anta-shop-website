@@ -21,6 +21,7 @@ const DEFAULT_PROFILE = {
 const DEFAULT_ORDERS = [
   {
     id: 'ORD001',
+    orderNumber: 'ORD001',
     date: '2024-01-15',
     createdAt: '2024-01-15T10:30:00',
     status: 'Đã giao',
@@ -41,6 +42,7 @@ const DEFAULT_ORDERS = [
   },
   {
     id: 'ORD002',
+    orderNumber: 'ORD002',
     date: '2024-01-20',
     createdAt: '2024-01-20T14:20:00',
     status: 'Đang giao',
@@ -61,6 +63,7 @@ const DEFAULT_ORDERS = [
   },
   {
     id: 'ORD003',
+    orderNumber: 'ORD003',
     date: '2024-01-25',
     createdAt: '2024-01-25T09:15:00',
     status: 'Đang xử lý',
@@ -88,6 +91,7 @@ const DEFAULT_ORDERS = [
   },
   {
     id: 'ORD004',
+    orderNumber: 'ORD004',
     date: '2024-02-01',
     createdAt: '2024-02-01T16:45:00',
     status: 'Đã hủy',
@@ -258,12 +262,60 @@ export const userOrderService = {
 
   cancelOrder: async (id) => {
     await delay();
+
+    // Update user orders
     const orders = getFromStorage(STORAGE_KEYS.USER_ORDERS, DEFAULT_ORDERS);
     const orderIndex = orders.findIndex(o => o.id === id);
-    if (orderIndex !== -1) {
-      orders[orderIndex].status = 'Đã hủy';
-      setToStorage(STORAGE_KEYS.USER_ORDERS, orders);
+    if (orderIndex === -1) {
+      throw new Error('Không tìm thấy đơn hàng');
     }
+
+    // Check if order can be cancelled
+    const order = orders[orderIndex];
+    const status = order.status.toLowerCase();
+    if (status !== 'đang xử lý' && status !== 'processing' && status !== 'chờ xử lý') {
+      throw new Error('Đơn hàng này không thể hủy');
+    }
+
+    // Update user order status
+    orders[orderIndex].status = 'Đã hủy';
+    setToStorage(STORAGE_KEYS.USER_ORDERS, orders);
+
+    // Sync with admin orders
+    try {
+      const ADMIN_ORDERS_KEY = 'anta_admin_orders';
+      const adminOrders = JSON.parse(localStorage.getItem(ADMIN_ORDERS_KEY) || '[]');
+
+      // Find matching admin order by orderNumber or id
+      const adminOrderIndex = adminOrders.findIndex(ao =>
+        ao.orderNumber === (order.orderNumber || order.id) ||
+        ao.id === order.id ||
+        ao.orderNumber === order.id
+      );
+
+      if (adminOrderIndex !== -1) {
+        adminOrders[adminOrderIndex].status = 'cancelled';
+        // Update product status as well
+        if (adminOrders[adminOrderIndex].products) {
+          adminOrders[adminOrderIndex].products.forEach(p => {
+            p.dueDate = 'Đ�� hủy';
+            p.shippingService = 'Đã hủy';
+          });
+        }
+        localStorage.setItem(ADMIN_ORDERS_KEY, JSON.stringify(adminOrders));
+
+        // Trigger storage event for admin dashboard
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: ADMIN_ORDERS_KEY,
+          newValue: JSON.stringify(adminOrders),
+          url: window.location.href
+        }));
+      }
+    } catch (error) {
+      console.error('Error syncing with admin orders:', error);
+      // Don't throw - user order was cancelled successfully
+    }
+
     return { message: 'Hủy đơn hàng thành công' };
   }
 };
@@ -288,7 +340,7 @@ export const userWishlistService = {
       inStock: true,
       product: {
         id: productId,
-        name: 'Sản phẩm mới',
+        name: 'Sản ph���m mới',
         image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=400',
         price: 1000000
       }
