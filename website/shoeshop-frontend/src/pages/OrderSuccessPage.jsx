@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components';
+import { useOrders } from '../contexts';
 import './OrderSuccessPage.css';
 
 export default function OrderSuccessPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const orderData = location.state?.orderData;
+  const { refreshOrders } = useOrders();
+
+  useEffect(() => {
+    if (orderData) {
+      refreshOrders();
+    }
+  }, [orderData, refreshOrders]);
 
   if (!orderData) {
     return (

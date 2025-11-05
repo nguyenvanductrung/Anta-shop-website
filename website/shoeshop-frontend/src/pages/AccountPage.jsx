@@ -1,22 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Layout } from '../components';
-import { useAuth } from '../contexts';
-import { userService, orderService, wishlistService } from '../services/api';
+import { useAuth, useCart, useOrders, useWishlist, useUserData } from '../contexts';
 import './AccountPage.css';
 
 export default function AccountPage() {
   const navigate = useNavigate();
   const { section } = useParams();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+  const { addToCart } = useCart();
+  
+  const { orders, getOrder, getOrdersByStatus, totalOrders } = useOrders();
+  const { wishlist, removeFromWishlist: removeFromWishlistContext, totalWishlistItems } = useWishlist();
+  const { 
+    profile, 
+    addresses, 
+    updateProfile, 
+    changePassword,
+    addAddress,
+    updateAddress,
+    deleteAddress,
+    setDefaultAddress 
+  } = useUserData();
+
   const [activeTab, setActiveTab] = useState(section || 'overview');
-  const [orders, setOrders] = useState([]);
-  const [wishlist, setWishlist] = useState([]);
-  const [addresses, setAddresses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const [orderFilter, setOrderFilter] = useState('all');
+  
+  const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewOrder, setReviewOrder] = useState(null);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [trackingOrder, setTrackingOrder] = useState(null);
 
   const [profileData, setProfileData] = useState({
     fullName: '',
@@ -39,6 +57,11 @@ export default function AccountPage() {
     confirmPassword: ''
   });
 
+  const [reviewForm, setReviewForm] = useState({
+    rating: 5,
+    comment: ''
+  });
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate('/login');
@@ -52,77 +75,8 @@ export default function AccountPage() {
   }, [section]);
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      loadUserData();
-    }
-  }, [isAuthenticated, user]);
-
-  const loadUserData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        loadProfile(),
-        loadOrders(),
-        loadWishlist(),
-        loadAddresses()
-      ]);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadProfile = async () => {
-    try {
-      const response = await userService.getProfile();
-      setProfileData({
-        fullName: response.fullName || user?.username || '',
-        email: response.email || user?.email || '',
-        phone: response.phone || '',
-        birthday: response.birthday || '',
-        gender: response.gender || ''
-      });
-    } catch (error) {
-      setProfileData({
-        fullName: user?.username || '',
-        email: user?.email || '',
-        phone: '',
-        birthday: '',
-        gender: ''
-      });
-    }
-  };
-
-  const loadOrders = async () => {
-    try {
-      const response = await orderService.getOrders();
-      setOrders(response);
-    } catch (error) {
-      console.error('Error loading orders:', error);
-      setOrders([]);
-    }
-  };
-
-  const loadWishlist = async () => {
-    try {
-      const response = await wishlistService.getWishlist();
-      setWishlist(response);
-    } catch (error) {
-      console.error('Error loading wishlist:', error);
-      setWishlist([]);
-    }
-  };
-
-  const loadAddresses = async () => {
-    try {
-      const response = await userService.getAddresses();
-      setAddresses(response);
-    } catch (error) {
-      console.error('Error loading addresses:', error);
-      setAddresses([]);
-    }
-  };
+    setProfileData(profile);
+  }, [profile]);
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
@@ -133,7 +87,7 @@ export default function AccountPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await userService.updateProfile(profileData);
+      await updateProfile(profileData);
       alert('Cập nhật thông tin thành công!');
     } catch (error) {
       alert('Có lỗi xảy ra: ' + error.message);
@@ -162,7 +116,7 @@ export default function AccountPage() {
 
     setLoading(true);
     try {
-      await userService.changePassword({
+      await changePassword({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword
       });
@@ -224,11 +178,10 @@ export default function AccountPage() {
     setLoading(true);
     try {
       if (editingAddress) {
-        await userService.updateAddress(editingAddress.id, addressForm);
+        await updateAddress(editingAddress.id, addressForm);
       } else {
-        await userService.addAddress(addressForm);
+        await addAddress(addressForm);
       }
-      await loadAddresses();
       closeAddressModal();
       alert(editingAddress ? 'Cập nhật địa chỉ thành công!' : 'Thêm địa chỉ thành công!');
     } catch (error) {
@@ -245,8 +198,7 @@ export default function AccountPage() {
 
     setLoading(true);
     try {
-      await userService.deleteAddress(id);
-      await loadAddresses();
+      await deleteAddress(id);
       alert('Xóa địa chỉ thành công!');
     } catch (error) {
       alert('Có lỗi xảy ra: ' + error.message);
@@ -258,8 +210,7 @@ export default function AccountPage() {
   const handleSetDefaultAddress = async (id) => {
     setLoading(true);
     try {
-      await userService.setDefaultAddress(id);
-      await loadAddresses();
+      await setDefaultAddress(id);
       alert('Đã đặt làm địa chỉ mặc định!');
     } catch (error) {
       alert('Có lỗi xảy ra: ' + error.message);
@@ -271,13 +222,71 @@ export default function AccountPage() {
   const handleRemoveFromWishlist = async (id) => {
     setLoading(true);
     try {
-      await wishlistService.removeFromWishlist(id);
-      await loadWishlist();
+      await removeFromWishlistContext(id);
     } catch (error) {
       alert('Có lỗi xảy ra: ' + error.message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleViewOrderDetail = async (order) => {
+    try {
+      const orderDetail = await getOrder(order.id);
+      setSelectedOrder(orderDetail);
+      setShowOrderDetailModal(true);
+    } catch (error) {
+      alert('Không thể tải chi tiết đơn hàng: ' + error.message);
+    }
+  };
+
+  const handleReorder = async (order) => {
+    try {
+      if (order.products && order.products.length > 0) {
+        order.products.forEach(product => {
+          addToCart({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity: product.quantity || 1
+          });
+        });
+        alert('Đã thêm sản phẩm vào giỏ hàng!');
+        navigate('/cart');
+      } else {
+        alert('Không thể tải thông tin sản phẩm');
+      }
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    }
+  };
+
+  const handleOpenReview = (order) => {
+    setReviewOrder(order);
+    setReviewForm({ rating: 5, comment: '' });
+    setShowReviewModal(true);
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    try {
+      alert(`Cảm ơn bạn đã đánh giá ${reviewForm.rating} sao cho đơn hàng #${reviewOrder.id}!`);
+      setShowReviewModal(false);
+      setReviewOrder(null);
+      setReviewForm({ rating: 5, comment: '' });
+    } catch (error) {
+      alert('Có lỗi xảy ra: ' + error.message);
+    }
+  };
+
+  const handleTrackOrder = (order) => {
+    setTrackingOrder(order);
+    setShowTrackingModal(true);
+  };
+
+  const handleNavigateToProduct = (productId) => {
+    navigate(`/product/${productId}`);
   };
 
   const handleLogout = () => {
@@ -305,22 +314,30 @@ export default function AccountPage() {
   };
 
   const getFilteredOrders = () => {
-    if (orderFilter === 'all') return orders;
-    return orders.filter(order => {
-      const status = order.status.toLowerCase();
-      switch (orderFilter) {
-        case 'processing':
-          return status === 'processing' || status === 'đang xử lý';
-        case 'shipping':
-          return status === 'shipping' || status === 'đang giao';
-        case 'delivered':
-          return status === 'delivered' || status === 'đã giao';
-        case 'cancelled':
-          return status === 'cancelled' || status === 'đã hủy';
-        default:
-          return true;
-      }
-    });
+    return getOrdersByStatus(orderFilter);
+  };
+
+  const getTrackingSteps = (order) => {
+    const steps = [
+      { label: 'Đã đặt hàng', completed: true },
+      { label: 'Đang xử lý', completed: false },
+      { label: 'Đang giao', completed: false },
+      { label: 'Đã giao', completed: false }
+    ];
+
+    const status = order.status.toLowerCase();
+    if (status === 'đang xử lý' || status === 'processing') {
+      steps[1].completed = true;
+    } else if (status === 'đang giao' || status === 'shipping') {
+      steps[1].completed = true;
+      steps[2].completed = true;
+    } else if (status === 'đã giao' || status === 'delivered') {
+      steps[1].completed = true;
+      steps[2].completed = true;
+      steps[3].completed = true;
+    }
+
+    return steps;
   };
 
   if (isLoading || loading) {
@@ -344,11 +361,11 @@ export default function AccountPage() {
 
       <div className="account-stats">
         <div className="stat-box" onClick={() => setActiveTab('orders')}>
-          <div className="stat-number">{orders.length}</div>
+          <div className="stat-number">{totalOrders}</div>
           <div className="stat-text">Đơn hàng</div>
         </div>
         <div className="stat-box" onClick={() => setActiveTab('wishlist')}>
-          <div className="stat-number">{wishlist.length}</div>
+          <div className="stat-number">{totalWishlistItems}</div>
           <div className="stat-text">Yêu thích</div>
         </div>
         <div className="stat-box">
@@ -365,7 +382,7 @@ export default function AccountPage() {
         {orders.length > 0 ? (
           <div className="recent-orders">
             {orders.slice(0, 2).map((order) => (
-              <div key={order.id} className="recent-order-item">
+              <div key={order.id} className="recent-order-item" onClick={() => handleViewOrderDetail(order)}>
                 <div className="order-thumbnail">
                   <img src={order.image || 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=300'} alt="Sản phẩm" />
                 </div>
@@ -433,15 +450,15 @@ export default function AccountPage() {
                   </div>
                 </div>
                 <div className="order-card-footer">
-                  <button className="order-action-btn secondary">Xem chi tiết</button>
+                  <button className="order-action-btn secondary" onClick={() => handleViewOrderDetail(order)}>Xem chi tiết</button>
                   {(order.status === 'Đã giao' || order.status === 'DELIVERED') && (
                     <>
-                      <button className="order-action-btn secondary">Mua lại</button>
-                      <button className="order-action-btn primary">Đánh giá</button>
+                      <button className="order-action-btn secondary" onClick={() => handleReorder(order)}>Mua lại</button>
+                      <button className="order-action-btn primary" onClick={() => handleOpenReview(order)}>Đánh giá</button>
                     </>
                   )}
                   {(order.status === 'Đang giao' || order.status === 'SHIPPING') && (
-                    <button className="order-action-btn primary">Theo dõi đơn hàng</button>
+                    <button className="order-action-btn primary" onClick={() => handleTrackOrder(order)}>Theo dõi đơn hàng</button>
                   )}
                 </div>
               </div>
@@ -464,14 +481,14 @@ export default function AccountPage() {
           {wishlist.map((item) => (
             <div key={item.id} className="wishlist-product">
               <button className="remove-item" aria-label="Xóa khỏi yêu thích" onClick={() => handleRemoveFromWishlist(item.id)}>×</button>
-              <div className="product-img-wrapper">
+              <div className="product-img-wrapper" onClick={() => handleNavigateToProduct(item.productId || item.id)}>
                 <img src={item.image || item.product?.image} alt={item.name || item.product?.name} />
                 {!item.inStock && (
                   <div className="out-of-stock-label">Hết hàng</div>
                 )}
               </div>
               <div className="product-details">
-                <h4 className="product-name">{item.name || item.product?.name}</h4>
+                <h4 className="product-name" onClick={() => handleNavigateToProduct(item.productId || item.id)}>{item.name || item.product?.name}</h4>
                 <div className="product-pricing">
                   <span className="price-current">{(item.price || item.product?.price).toLocaleString()}₫</span>
                   {item.originalPrice && (
@@ -479,8 +496,8 @@ export default function AccountPage() {
                   )}
                 </div>
                 {item.inStock ? (
-                  <button className="cart-add-btn" onClick={() => navigate(`/product/${item.productId || item.id}`)}>
-                    Thêm vào giỏ hàng
+                  <button className="cart-add-btn" onClick={() => handleNavigateToProduct(item.productId || item.id)}>
+                    Xem sản phẩm
                   </button>
                 ) : (
                   <button className="notify-stock-btn">Thông báo khi có hàng</button>
@@ -571,7 +588,7 @@ export default function AccountPage() {
           <button type="submit" className="save-btn" disabled={loading}>
             {loading ? 'Đang cập nhật...' : 'Cập nhật thông tin'}
           </button>
-          <button type="button" className="cancel-btn" onClick={loadProfile}>Hủy</button>
+          <button type="button" className="cancel-btn" onClick={() => setProfileData(profile)}>Hủy</button>
         </div>
       </form>
 
@@ -820,6 +837,128 @@ export default function AccountPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showOrderDetailModal && selectedOrder && (
+        <div className="modal-overlay" onClick={() => setShowOrderDetailModal(false)}>
+          <div className="modal-content order-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Chi tiết đơn hàng #{selectedOrder.id}</h3>
+              <button className="modal-close" onClick={() => setShowOrderDetailModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="order-detail-status">
+                <span className={`status-badge status-${getStatusClass(selectedOrder.status)}`}>
+                  {selectedOrder.status}
+                </span>
+                <span className="order-detail-date">
+                  Ngày đặt: {new Date(selectedOrder.date || selectedOrder.createdAt).toLocaleDateString('vi-VN')}
+                </span>
+              </div>
+              
+              <div className="order-detail-section">
+                <h4>Sản phẩm</h4>
+                <div className="order-products-list">
+                  {selectedOrder.products && selectedOrder.products.map((product, index) => (
+                    <div key={index} className="order-product-item">
+                      <img src={product.image} alt={product.name} className="product-thumb" />
+                      <div className="product-info">
+                        <div className="product-name">{product.name}</div>
+                        <div className="product-meta">Số lượng: {product.quantity}</div>
+                      </div>
+                      <div className="product-price">{product.price.toLocaleString()}₫</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="order-detail-section">
+                <h4>Tổng cộng</h4>
+                <div className="order-total-amount">
+                  {(selectedOrder.total || selectedOrder.totalAmount).toLocaleString()}₫
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReviewModal && reviewOrder && (
+        <div className="modal-overlay" onClick={() => setShowReviewModal(false)}>
+          <div className="modal-content review-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Đánh giá đơn hàng #{reviewOrder.id}</h3>
+              <button className="modal-close" onClick={() => setShowReviewModal(false)}>×</button>
+            </div>
+            <form onSubmit={handleSubmitReview} className="modal-body">
+              <div className="field-group">
+                <label>Đánh giá của bạn</label>
+                <div className="star-rating">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`star-btn ${star <= reviewForm.rating ? 'active' : ''}`}
+                      onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="field-group">
+                <label htmlFor="reviewComment">Nhận xét</label>
+                <textarea
+                  id="reviewComment"
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm..."
+                  rows="4"
+                  required
+                />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="cancel-btn" onClick={() => setShowReviewModal(false)}>Hủy</button>
+                <button type="submit" className="save-btn">Gửi đánh giá</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showTrackingModal && trackingOrder && (
+        <div className="modal-overlay" onClick={() => setShowTrackingModal(false)}>
+          <div className="modal-content tracking-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Theo dõi đơn hàng #{trackingOrder.id}</h3>
+              <button className="modal-close" onClick={() => setShowTrackingModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="tracking-steps">
+                {getTrackingSteps(trackingOrder).map((step, index) => (
+                  <div key={index} className={`tracking-step ${step.completed ? 'completed' : ''}`}>
+                    <div className="step-marker">
+                      {step.completed ? (
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                          <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      ) : (
+                        <div className="step-circle"></div>
+                      )}
+                    </div>
+                    <div className="step-content">
+                      <div className="step-label">{step.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="tracking-info">
+                <p><strong>Ngày đặt hàng:</strong> {new Date(trackingOrder.date || trackingOrder.createdAt).toLocaleDateString('vi-VN')}</p>
+                <p><strong>Trạng thái:</strong> {trackingOrder.status}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

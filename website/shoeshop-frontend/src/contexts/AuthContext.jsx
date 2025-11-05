@@ -1,12 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { STORAGE_KEYS } from '../constants';
+import { useDataSync } from './DataSyncContext';
 
-// Auth Context để quản lý trạng thái đăng nhập
 const AuthContext = createContext();
 
-// Auth Provider component
 export const AuthProvider = ({ children }) => {
+  const dataSync = useDataSync ? (() => {
+    try {
+      return useDataSync();
+    } catch {
+      return null;
+    }
+  })() : null;
+
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -53,7 +60,6 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('auth:logout', handleLogout);
   }, []);
 
-  // Login function
   const login = (token) => {
     localStorage.setItem(STORAGE_KEYS.TOKEN, token);
     try {
@@ -65,16 +71,21 @@ export const AuthProvider = ({ children }) => {
       };
       setUser(userData);
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(userData));
+      if (dataSync) {
+        dataSync.emitAuthUpdate({ action: 'login', user: userData });
+      }
     } catch (error) {
       console.error('Invalid token:', error);
     }
   };
 
-  // Logout function
   const logout = () => {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
     setUser(null);
+    if (dataSync) {
+      dataSync.emitAuthUpdate({ action: 'logout' });
+    }
   };
 
   // Check if user is admin

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { STORAGE_KEYS } from '../constants';
+import { useDataSync } from './DataSyncContext';
 
 const CartContext = createContext();
 
@@ -108,6 +109,14 @@ const cartReducer = (state, action) => {
 };
 
 export const CartProvider = ({ children }) => {
+  const dataSync = useDataSync ? (() => {
+    try {
+      return useDataSync();
+    } catch {
+      return null;
+    }
+  })() : null;
+
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     coupon: null
@@ -129,10 +138,29 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(state.items));
+      if (dataSync) {
+        dataSync.emitCartUpdate({ action: 'update', items: state.items });
+      }
     } catch (error) {
       console.error('Failed to save cart to localStorage:', error);
     }
-  }, [state.items]);
+  }, [state.items, dataSync]);
+
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === STORAGE_KEYS.CART && e.newValue !== e.oldValue) {
+        try {
+          const newCart = e.newValue ? JSON.parse(e.newValue) : [];
+          dispatch({ type: 'LOAD_CART', payload: newCart });
+        } catch (error) {
+          console.error('Error syncing cart from storage:', error);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const addToCart = (product) => {
     if (!product || !product.id) {

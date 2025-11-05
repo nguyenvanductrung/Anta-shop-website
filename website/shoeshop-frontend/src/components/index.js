@@ -13,6 +13,7 @@ export { default as ShippingManagement } from './ShippingManagement';
 export { default as AddProduct } from './AddProduct';
 export { default as TestCart } from './TestCart';
 export { default as FloatingButtons } from './FloatingButtons';
+export { default as DataSyncExample } from './DataSyncExample';
 export { ProtectedRoute } from './ProtectedRoute';
 
 // Overlay components

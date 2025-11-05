@@ -453,7 +453,7 @@ export default function AdminPage() {
                     </div>
                     <div className="metric-item">
                       <div className="metric-header">
-                        <span className="metric-label">Sản ph���m trong kho</span>
+                        <span className="metric-label">Sản phẩm trong kho</span>
                         <span className="metric-percentage">
                           {dashboardStats?.totalProducts - dashboardStats?.lowStockProducts || 0} OK
                         </span>

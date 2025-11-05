@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components';
-import { useCart } from '../contexts';
+import { useCart, useDataSync } from '../contexts';
 import './CheckoutPage.css';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { items, getTotalPrice, clearCart } = useCart();
+  const dataSync = useDataSync();
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -93,8 +94,13 @@ export default function CheckoutPage() {
     };
 
     console.log('Order placed:', orderData);
-    
+
     clearCart();
+
+    if (dataSync) {
+      dataSync.emitOrdersUpdate({ action: 'create', order: orderData });
+    }
+
     navigate('/order-success', { state: { orderData } });
   };
 

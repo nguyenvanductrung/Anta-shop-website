@@ -1,8 +1,16 @@
-// Mock User Service với dữ liệu hardcode
+// Mock User Service với dữ liệu hardcode + localStorage
 const delay = (ms = 500) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Mock data storage
-let mockUserProfile = {
+// Storage keys
+const STORAGE_KEYS = {
+  USER_PROFILE: 'anta_user_profile',
+  USER_ORDERS: 'anta_user_orders',
+  USER_WISHLIST: 'anta_user_wishlist',
+  USER_ADDRESSES: 'anta_user_addresses'
+};
+
+// Default hardcoded data
+const DEFAULT_PROFILE = {
   fullName: 'Nguyễn Văn A',
   email: 'user@anta.com',
   phone: '0123456789',
@@ -10,7 +18,7 @@ let mockUserProfile = {
   gender: 'male'
 };
 
-let mockOrders = [
+const DEFAULT_ORDERS = [
   {
     id: 'ORD001',
     date: '2024-01-15',
@@ -100,7 +108,7 @@ let mockOrders = [
   }
 ];
 
-let mockWishlist = [
+const DEFAULT_WISHLIST = [
   {
     id: 1,
     productId: 101,
@@ -147,7 +155,7 @@ let mockWishlist = [
   }
 ];
 
-let mockAddresses = [
+const DEFAULT_ADDRESSES = [
   {
     id: 1,
     recipientName: 'Nguyễn Văn A',
@@ -164,17 +172,57 @@ let mockAddresses = [
   }
 ];
 
+// Helper functions to get/set data from localStorage
+const getFromStorage = (key, defaultValue) => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch (error) {
+    console.error(`Error reading ${key} from localStorage:`, error);
+    return defaultValue;
+  }
+};
+
+const setToStorage = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+};
+
+// Initialize data in localStorage if not exists
+const initializeStorage = () => {
+  if (!localStorage.getItem(STORAGE_KEYS.USER_PROFILE)) {
+    setToStorage(STORAGE_KEYS.USER_PROFILE, DEFAULT_PROFILE);
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.USER_ORDERS)) {
+    setToStorage(STORAGE_KEYS.USER_ORDERS, DEFAULT_ORDERS);
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.USER_WISHLIST)) {
+    setToStorage(STORAGE_KEYS.USER_WISHLIST, DEFAULT_WISHLIST);
+  }
+  if (!localStorage.getItem(STORAGE_KEYS.USER_ADDRESSES)) {
+    setToStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
+  }
+};
+
+// Initialize storage on module load
+initializeStorage();
+
 // User Profile Service
 export const userProfileService = {
   getProfile: async () => {
     await delay();
-    return mockUserProfile;
+    return getFromStorage(STORAGE_KEYS.USER_PROFILE, DEFAULT_PROFILE);
   },
 
   updateProfile: async (profileData) => {
     await delay();
-    mockUserProfile = { ...mockUserProfile, ...profileData };
-    return mockUserProfile;
+    const currentProfile = getFromStorage(STORAGE_KEYS.USER_PROFILE, DEFAULT_PROFILE);
+    const updatedProfile = { ...currentProfile, ...profileData };
+    setToStorage(STORAGE_KEYS.USER_PROFILE, updatedProfile);
+    return updatedProfile;
   },
 
   changePassword: async (passwordData) => {
@@ -183,6 +231,10 @@ export const userProfileService = {
     if (passwordData.currentPassword !== 'password123') {
       throw new Error('Mật khẩu hiện tại không đúng');
     }
+    if (passwordData.newPassword.length < 6) {
+      throw new Error('Mật khẩu mới phải có ít nhất 6 ký tự');
+    }
+    // In a real app, would save the new password
     return { message: 'Đổi mật khẩu thành công' };
   }
 };
@@ -191,12 +243,13 @@ export const userProfileService = {
 export const userOrderService = {
   getOrders: async (params = {}) => {
     await delay();
-    return mockOrders;
+    return getFromStorage(STORAGE_KEYS.USER_ORDERS, DEFAULT_ORDERS);
   },
 
   getOrder: async (id) => {
     await delay();
-    const order = mockOrders.find(o => o.id === id);
+    const orders = getFromStorage(STORAGE_KEYS.USER_ORDERS, DEFAULT_ORDERS);
+    const order = orders.find(o => o.id === id);
     if (!order) {
       throw new Error('Không tìm thấy đơn hàng');
     }
@@ -205,9 +258,11 @@ export const userOrderService = {
 
   cancelOrder: async (id) => {
     await delay();
-    const order = mockOrders.find(o => o.id === id);
-    if (order) {
-      order.status = 'Đã hủy';
+    const orders = getFromStorage(STORAGE_KEYS.USER_ORDERS, DEFAULT_ORDERS);
+    const orderIndex = orders.findIndex(o => o.id === id);
+    if (orderIndex !== -1) {
+      orders[orderIndex].status = 'Đã hủy';
+      setToStorage(STORAGE_KEYS.USER_ORDERS, orders);
     }
     return { message: 'Hủy đơn hàng thành công' };
   }
@@ -217,31 +272,41 @@ export const userOrderService = {
 export const userWishlistService = {
   getWishlist: async () => {
     await delay();
-    return mockWishlist;
+    return getFromStorage(STORAGE_KEYS.USER_WISHLIST, DEFAULT_WISHLIST);
   },
 
   addToWishlist: async (productId) => {
     await delay();
+    const wishlist = getFromStorage(STORAGE_KEYS.USER_WISHLIST, DEFAULT_WISHLIST);
+    const maxId = wishlist.reduce((max, item) => Math.max(max, item.id), 0);
     const newItem = {
-      id: mockWishlist.length + 1,
+      id: maxId + 1,
       productId,
       name: 'Sản phẩm mới',
       image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=400',
       price: 1000000,
-      inStock: true
+      inStock: true,
+      product: {
+        id: productId,
+        name: 'Sản phẩm mới',
+        image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=400',
+        price: 1000000
+      }
     };
-    mockWishlist.push(newItem);
+    wishlist.push(newItem);
+    setToStorage(STORAGE_KEYS.USER_WISHLIST, wishlist);
     return newItem;
   },
 
   removeFromWishlist: async (id) => {
     await delay();
-    const index = mockWishlist.findIndex(item => item.id === parseInt(id));
-    if (index !== -1) {
-      mockWishlist.splice(index, 1);
-      return { message: 'Đã xóa khỏi danh sách yêu thích' };
+    const wishlist = getFromStorage(STORAGE_KEYS.USER_WISHLIST, DEFAULT_WISHLIST);
+    const filteredWishlist = wishlist.filter(item => item.id !== parseInt(id));
+    if (filteredWishlist.length === wishlist.length) {
+      throw new Error('Không tìm thấy sản phẩm');
     }
-    throw new Error('Không tìm thấy sản phẩm');
+    setToStorage(STORAGE_KEYS.USER_WISHLIST, filteredWishlist);
+    return { message: 'Đã xóa khỏi danh sách yêu thích' };
   }
 };
 
@@ -249,62 +314,84 @@ export const userWishlistService = {
 export const userAddressService = {
   getAddresses: async () => {
     await delay();
-    return mockAddresses;
+    return getFromStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
   },
 
   addAddress: async (addressData) => {
     await delay();
-    const newAddress = {
-      id: mockAddresses.length + 1,
-      ...addressData
-    };
+    const addresses = getFromStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
+    const maxId = addresses.reduce((max, addr) => Math.max(max, addr.id), 0);
     
     // If set as default, remove default from others
     if (addressData.isDefault) {
-      mockAddresses.forEach(addr => addr.isDefault = false);
+      addresses.forEach(addr => addr.isDefault = false);
     }
     
-    mockAddresses.push(newAddress);
+    const newAddress = {
+      id: maxId + 1,
+      ...addressData
+    };
+    
+    addresses.push(newAddress);
+    setToStorage(STORAGE_KEYS.USER_ADDRESSES, addresses);
     return newAddress;
   },
 
   updateAddress: async (id, addressData) => {
     await delay();
-    const index = mockAddresses.findIndex(addr => addr.id === parseInt(id));
-    if (index !== -1) {
-      // If set as default, remove default from others
-      if (addressData.isDefault) {
-        mockAddresses.forEach(addr => addr.isDefault = false);
-      }
-      
-      mockAddresses[index] = { ...mockAddresses[index], ...addressData };
-      return mockAddresses[index];
+    const addresses = getFromStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
+    const index = addresses.findIndex(addr => addr.id === parseInt(id));
+    
+    if (index === -1) {
+      throw new Error('Không tìm thấy địa chỉ');
     }
-    throw new Error('Không tìm thấy địa chỉ');
+    
+    // If set as default, remove default from others
+    if (addressData.isDefault) {
+      addresses.forEach(addr => addr.isDefault = false);
+    }
+    
+    addresses[index] = { ...addresses[index], ...addressData };
+    setToStorage(STORAGE_KEYS.USER_ADDRESSES, addresses);
+    return addresses[index];
   },
 
   deleteAddress: async (id) => {
     await delay();
-    const index = mockAddresses.findIndex(addr => addr.id === parseInt(id));
-    if (index !== -1) {
-      mockAddresses.splice(index, 1);
-      return { message: 'Xóa địa chỉ thành công' };
+    const addresses = getFromStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
+    const filteredAddresses = addresses.filter(addr => addr.id !== parseInt(id));
+    
+    if (filteredAddresses.length === addresses.length) {
+      throw new Error('Không tìm thấy địa chỉ');
     }
-    throw new Error('Không tìm thấy địa chỉ');
+    
+    setToStorage(STORAGE_KEYS.USER_ADDRESSES, filteredAddresses);
+    return { message: 'Xóa địa chỉ thành công' };
   },
 
   setDefaultAddress: async (id) => {
     await delay();
-    mockAddresses.forEach(addr => {
+    const addresses = getFromStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
+    addresses.forEach(addr => {
       addr.isDefault = addr.id === parseInt(id);
     });
+    setToStorage(STORAGE_KEYS.USER_ADDRESSES, addresses);
     return { message: 'Đã đặt làm địa chỉ mặc định' };
   }
+};
+
+// Export utility function to reset all data to defaults
+export const resetUserData = () => {
+  setToStorage(STORAGE_KEYS.USER_PROFILE, DEFAULT_PROFILE);
+  setToStorage(STORAGE_KEYS.USER_ORDERS, DEFAULT_ORDERS);
+  setToStorage(STORAGE_KEYS.USER_WISHLIST, DEFAULT_WISHLIST);
+  setToStorage(STORAGE_KEYS.USER_ADDRESSES, DEFAULT_ADDRESSES);
 };
 
 export default {
   profile: userProfileService,
   orders: userOrderService,
   wishlist: userWishlistService,
-  addresses: userAddressService
+  addresses: userAddressService,
+  resetUserData
 };
