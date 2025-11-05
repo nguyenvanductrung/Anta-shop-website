@@ -142,137 +142,126 @@ export const cartService = {
   },
 };
 
-// User services
+// Import mock user services
+import mockUserService from './userService';
+
+// User services - Using mock data
 export const userService = {
   getProfile: async () => {
     try {
-      const response = await api.get(API_ENDPOINTS.USER.PROFILE);
-      return response.data;
+      return await mockUserService.profile.getProfile();
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi tải thông tin người dùng');
     }
   },
 
   updateProfile: async (userData) => {
     try {
-      const response = await api.put(API_ENDPOINTS.USER.UPDATE_PROFILE, userData);
-      return response.data;
+      return await mockUserService.profile.updateProfile(userData);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi cập nhật thông tin');
     }
   },
 
   changePassword: async (passwordData) => {
     try {
-      const response = await api.post(API_ENDPOINTS.USER.CHANGE_PASSWORD, passwordData);
-      return response.data;
+      return await mockUserService.profile.changePassword(passwordData);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi đổi mật khẩu');
     }
   },
 
   getAddresses: async () => {
     try {
-      const response = await api.get(API_ENDPOINTS.USER.ADDRESSES);
-      return response.data;
+      return await mockUserService.addresses.getAddresses();
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi tải danh sách địa chỉ');
     }
   },
 
   addAddress: async (addressData) => {
     try {
-      const response = await api.post(API_ENDPOINTS.USER.ADD_ADDRESS, addressData);
-      return response.data;
+      return await mockUserService.addresses.addAddress(addressData);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi thêm địa chỉ');
     }
   },
 
   updateAddress: async (id, addressData) => {
     try {
-      const response = await api.put(
-        API_ENDPOINTS.USER.UPDATE_ADDRESS.replace(':id', id),
-        addressData
-      );
-      return response.data;
+      return await mockUserService.addresses.updateAddress(id, addressData);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi cập nhật địa chỉ');
     }
   },
 
   deleteAddress: async (id) => {
     try {
-      const response = await api.delete(
-        API_ENDPOINTS.USER.DELETE_ADDRESS.replace(':id', id)
-      );
-      return response.data;
+      return await mockUserService.addresses.deleteAddress(id);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi xóa địa chỉ');
     }
   },
 
   setDefaultAddress: async (id) => {
     try {
-      const response = await api.put(
-        API_ENDPOINTS.USER.SET_DEFAULT_ADDRESS.replace(':id', id)
-      );
-      return response.data;
+      return await mockUserService.addresses.setDefaultAddress(id);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi đặt địa chỉ mặc định');
     }
   },
 };
 
-// Order services
+// Order services - Using mock data
 export const orderService = {
   getOrders: async (params = {}) => {
     try {
-      const response = await api.get(API_ENDPOINTS.ORDERS.LIST, { params });
-      return response.data;
+      return await mockUserService.orders.getOrders(params);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi tải đơn hàng');
     }
   },
 
   getOrder: async (id) => {
     try {
-      const response = await api.get(API_ENDPOINTS.ORDERS.DETAIL.replace(':id', id));
-      return response.data;
+      return await mockUserService.orders.getOrder(id);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi tải chi tiết đơn hàng');
+    }
+  },
+
+  cancelOrder: async (id) => {
+    try {
+      return await mockUserService.orders.cancelOrder(id);
+    } catch (error) {
+      throw new Error(error.message || 'Lỗi khi hủy đơn hàng');
     }
   },
 };
 
-// Wishlist services
+// Wishlist services - Using mock data
 export const wishlistService = {
   getWishlist: async () => {
     try {
-      const response = await api.get(API_ENDPOINTS.WISHLIST.LIST);
-      return response.data;
+      return await mockUserService.wishlist.getWishlist();
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi tải danh sách yêu thích');
     }
   },
 
   addToWishlist: async (productId) => {
     try {
-      const response = await api.post(API_ENDPOINTS.WISHLIST.ADD, { productId });
-      return response.data;
+      return await mockUserService.wishlist.addToWishlist(productId);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi thêm vào danh sách yêu thích');
     }
   },
 
   removeFromWishlist: async (id) => {
     try {
-      const response = await api.delete(
-        API_ENDPOINTS.WISHLIST.REMOVE.replace(':id', id)
-      );
-      return response.data;
+      return await mockUserService.wishlist.removeFromWishlist(id);
     } catch (error) {
-      throw new Error(getErrorMessage(error));
+      throw new Error(error.message || 'Lỗi khi xóa khỏi danh sách yêu thích');
     }
   },
 };

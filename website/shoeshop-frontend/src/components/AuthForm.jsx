@@ -1,9 +1,7 @@
 import { useState } from "react";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
-import { jwtDecode } from "jwt-decode";
 import { useAuth } from "../contexts";
-import { STORAGE_KEYS } from "../constants";
+import mockAuthService from "../services/authService";
 import "./AuthForm.css";
 
 export default function AuthForm({ type }) {
@@ -12,148 +10,148 @@ export default function AuthForm({ type }) {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const navigate = useNavigate();
   const { login } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (type === "login") {
-      const ADMIN_USERNAME = "admin";
-      const ADMIN_PASSWORD = "abc123!@#";
-
-      if (formData.username === ADMIN_USERNAME && formData.password === ADMIN_PASSWORD) {
-        const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-        const payload = btoa(JSON.stringify({
-          sub: ADMIN_USERNAME,
-          role: "ADMIN",
-          email: "admin@anta.com",
-          iat: Math.floor(Date.now() / 1000),
-          exp: Math.floor(Date.now() / 1000) + 86400
-        }));
-        const signature = btoa("mock-signature");
-        const mockAdminToken = `${header}.${payload}.${signature}`;
-
-        login(mockAdminToken);
-        alert("Đăng nhập thành công! Chào mừng Admin!");
-        navigate("/admin");
-        return;
-      }
-    }
+    setError("");
+    setLoading(true);
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
-      const url =
-        type === "register"
-          ? `${baseUrl}/api/auth/register`
-          : `${baseUrl}/api/auth/login`;
-
-      const payload =
-        type === "register"
-          ? formData
-          : { username: formData.username, password: formData.password };
-
-      const res = await axios.post(url, payload);
-
       if (type === "register") {
-        alert("Đăng ký thành công, vui lòng đăng nhập!");
+        const result = await mockAuthService.register(formData);
+        alert(result.message);
         navigate("/login");
       } else {
-        const token = res.data.token;
-        login(token);
+        const result = await mockAuthService.login({
+          username: formData.username,
+          password: formData.password
+        });
 
-        const decoded = jwtDecode(token);
-        console.log("Decoded token:", decoded);
+        login(result.token);
 
-        if (decoded.role === "ADMIN") {
-          alert("Đăng nhập thành công! Chào Admin!");
+        if (result.user.role === "ADMIN") {
+          alert("Đăng nhập thành công! Chào mừng Admin!");
           navigate("/admin");
         } else {
           alert("Đăng nhập thành công!");
-          navigate("/home");
+          navigate("/account");
         }
       }
     } catch (err) {
-      if (type === "login") {
-        alert("Sai tên đăng nhập hoặc mật khẩu!");
-      } else {
-        alert("Lỗi: " + (err.response?.data?.message || err.message));
-      }
+      setError(err.message || "Có lỗi xảy ra");
+      console.error("Auth error:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-container">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h2>{type === "register" ? "Register" : "Login"}</h2>
+        <h2>{type === "register" ? "Đăng Ký" : "Đăng Nhập"}</h2>
+        
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
 
         {type === "register" && (
           <>
-            <input
-              type="text"
-              name="username"
-              placeholder="Username"
-              value={formData.username}
-              onChange={handleChange}
-              required
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
+            <div className="form-field">
+              <input
+                type="text"
+                name="username"
+                placeholder="Tên đăng nhập"
+                value={formData.username}
+                onChange={handleChange}
+                required
+                minLength={3}
+                disabled={loading}
+              />
+              <small className="field-hint">Tối thiểu 3 ký tự</small>
+            </div>
+            <div className="form-field">
+              <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+            </div>
           </>
         )}
 
         {type === "login" && (
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={formData.username}
-            onChange={handleChange}
-            required
-          />
+          <div className="form-field">
+            <input
+              type="text"
+              name="username"
+              placeholder="Tên đăng nhập"
+              value={formData.username}
+              onChange={handleChange}
+              required
+              disabled={loading}
+            />
+          </div>
         )}
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
+        <div className="form-field">
+          <input
+            type="password"
+            name="password"
+            placeholder="Mật khẩu"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            minLength={6}
+            disabled={loading}
+          />
+          <small className="field-hint">Tối thiểu 6 ký tự</small>
+        </div>
 
-        <button type="submit">
-          {type === "register" ? "Sign Up" : "Login"}
+        <button type="submit" disabled={loading} className="submit-btn">
+          {loading ? "Đang xử lý..." : (type === "register" ? "Đăng Ký" : "Đăng Nhập")}
         </button>
 
         {type === "login" && (
-          <p>
-            <Link to="/forgot-password">Forgot password?</Link>
+          <p className="form-footer-text">
+            <Link to="/forgot-password" className="link-text">Quên mật khẩu?</Link>
           </p>
         )}
 
-        <p>
+        <p className="form-footer-text">
           {type === "register" ? (
             <>
-              Already have an account? <Link to="/login">Login</Link>
+              Đã có tài khoản? <Link to="/login" className="link-text">Đăng nhập</Link>
             </>
           ) : (
             <>
-              Don’t have an account? <Link to="/register">Register</Link>
+              Chưa có tài khoản? <Link to="/register" className="link-text">Đăng ký</Link>
             </>
           )}
         </p>
+
+        {type === "login" && (
+          <div className="test-accounts">
+            <p className="test-title">Tài khoản test:</p>
+            <small>👤 User: <strong>user</strong> / <strong>123456</strong></small>
+            <small>👨‍💼 Admin: <strong>admin</strong> / <strong>abc123!@#</strong></small>
+          </div>
+        )}
       </form>
     </div>
   );
