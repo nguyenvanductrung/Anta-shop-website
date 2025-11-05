@@ -1,16 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import adminService from '../services/adminService';
 import './AddProduct.css';
 
-export default function AddProduct({ setActiveSubTab }) {
+export default function AddProduct({ setActiveSubTab, editingProduct, onProductSaved }) {
   const [formData, setFormData] = useState({
-    productName: '',
+    name: '',
     description: '',
     price: '',
-    stock: '',
-    category: ''
+    quantity: '',
+    category: '',
+    image: ''
   });
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState('');
 
   const categories = [
     { id: 'giay-bong-ro', name: 'Giày Bóng Rổ' },
@@ -23,10 +26,63 @@ export default function AddProduct({ setActiveSubTab }) {
     { id: 'phu-kien', name: 'Phụ Kiện' }
   ];
 
+  useEffect(() => {
+    if (editingProduct) {
+      setFormData({
+        name: editingProduct.name || '',
+        description: editingProduct.description || '',
+        price: editingProduct.price || '',
+        quantity: editingProduct.quantity || '',
+        category: editingProduct.category || '',
+        image: editingProduct.image || ''
+      });
+      setImagePreview(editingProduct.image || '');
+
+      const category = categories.find(cat => cat.name === editingProduct.category);
+      if (category) {
+        setSelectedCategory(category.id);
+      }
+    }
+  }, [editingProduct]);
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Kích thước ảnh không được vượt quá 5MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        alert('Vui lòng chọn file ảnh');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result;
+        setImagePreview(base64String);
+        setFormData(prev => ({
+          ...prev,
+          image: base64String
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImagePreview('');
+    setFormData(prev => ({
+      ...prev,
+      image: ''
     }));
   };
 
@@ -39,49 +95,46 @@ export default function AddProduct({ setActiveSubTab }) {
     }));
   };
 
-  const handleImageUpload = (event) => {
-    const files = Array.from(event.target.files);
-    if (images.length + files.length > 6) {
-      alert('Tối đa 6 hình ảnh');
-      return;
-    }
-    const newImages = files.map(file => ({
-      id: Date.now() + Math.random(),
-      file,
-      preview: URL.createObjectURL(file)
-    }));
-    setImages(prev => [...prev, ...newImages]);
-  };
-
-  const removeImage = (imageId) => {
-    setImages(prev => {
-      const image = prev.find(img => img.id === imageId);
-      if (image?.preview) {
-        URL.revokeObjectURL(image.preview);
-      }
-      return prev.filter(img => img.id !== imageId);
-    });
-  };
-
-  const handleSubmit = () => {
-    if (!formData.productName || !formData.price || !formData.stock || !formData.category) {
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.price || !formData.quantity || !formData.category) {
       alert('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
     
-    console.log('Submitting product:', formData);
-    console.log('Images:', images);
-    alert('Sản phẩm đã được thêm thành công!');
+    setLoading(true);
     
-    setFormData({
-      productName: '',
-      description: '',
-      price: '',
-      stock: '',
-      category: ''
-    });
-    setImages([]);
-    setSelectedCategory('');
+    const productData = {
+      name: formData.name,
+      description: formData.description,
+      price: parseInt(formData.price),
+      quantity: parseInt(formData.quantity),
+      category: formData.category,
+      image: formData.image || 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=400'
+    };
+
+    try {
+      let result;
+      if (editingProduct) {
+        result = await adminService.products.updateProduct(editingProduct.id, productData);
+      } else {
+        result = await adminService.products.createProduct(productData);
+      }
+
+      if (result.success) {
+        alert(result.message);
+        if (onProductSaved) {
+          onProductSaved();
+        }
+        setActiveSubTab('my-products');
+      } else {
+        alert(result.error || 'Có lỗi xảy ra');
+      }
+    } catch (error) {
+      alert('Có lỗi xảy ra khi lưu sản phẩm');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -97,8 +150,12 @@ export default function AddProduct({ setActiveSubTab }) {
       <div className="add-product-content">
         <div className="page-header-section">
           <div className="header-left">
-            <h1 className="page-main-title">Thêm Sản Phẩm Mới</h1>
-            <p className="page-subtitle">Điền thông tin sản phẩm của bạn</p>
+            <h1 className="page-main-title">
+              {editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Thêm Sản Phẩm Mới'}
+            </h1>
+            <p className="page-subtitle">
+              {editingProduct ? 'Cập nhật thông tin sản phẩm' : 'Điền thông tin sản phẩm của bạn'}
+            </p>
           </div>
           <button className="cancel-add-btn" onClick={handleCancel}>
             <span className="btn-icon">←</span>
@@ -117,8 +174,8 @@ export default function AddProduct({ setActiveSubTab }) {
                   <input
                     type="text"
                     className="form-text-input"
-                    value={formData.productName}
-                    onChange={(e) => handleInputChange('productName', e.target.value)}
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Ví dụ: Giày ANTA KT7 - Đen"
                   />
                 </div>
@@ -151,56 +208,49 @@ export default function AddProduct({ setActiveSubTab }) {
                     <input
                       type="number"
                       className="form-text-input"
-                      value={formData.stock}
-                      onChange={(e) => handleInputChange('stock', e.target.value)}
+                      value={formData.quantity}
+                      onChange={(e) => handleInputChange('quantity', e.target.value)}
                       placeholder="Ví dụ: 100"
                     />
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="section-card">
-              <h3 className="section-card-title">Hình Ảnh Sản Phẩm</h3>
-              <p className="section-card-subtitle">Tối đa 6 hình ảnh. Hình đầu tiên sẽ là ảnh đại diện.</p>
-              
-              <div className="images-upload-grid">
-                {Array.from({ length: 6 }, (_, index) => {
-                  const image = images[index];
-                  return (
-                    <div key={index} className="image-upload-slot">
-                      {image ? (
-                        <div className="image-preview-wrapper">
-                          <img src={image.preview} alt={`Preview ${index + 1}`} className="uploaded-image-preview" />
-                          <button 
-                            className="remove-image-btn"
-                            onClick={() => removeImage(image.id)}
-                            type="button"
-                          >
-                            ✕
-                          </button>
-                          {index === 0 && (
-                            <span className="primary-image-badge">Ảnh chính</span>
-                          )}
-                        </div>
-                      ) : (
-                        <label className="upload-image-label">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageUpload}
-                            style={{ display: 'none' }}
-                            multiple={images.length === 0}
-                          />
-                          <div className="upload-image-placeholder">
-                            <span className="upload-placeholder-icon">📷</span>
-                            <span className="upload-placeholder-text">Thêm ảnh</span>
-                          </div>
-                        </label>
-                      )}
+                <div className="form-input-group">
+                  <label className="input-label">Hình ảnh sản phẩm</label>
+                  <div className="image-upload-section">
+                    <input
+                      type="file"
+                      id="product-image-upload"
+                      className="file-input-hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                    <label htmlFor="product-image-upload" className="file-upload-button">
+                      <span className="upload-icon">📷</span>
+                      <span className="upload-text">Chọn ảnh từ máy</span>
+                      <span className="upload-hint">JPG, PNG, GIF (Max 5MB)</span>
+                    </label>
+                  </div>
+                  {imagePreview && (
+                    <div className="image-preview-container">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="form-image-preview"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="remove-preview-btn"
+                        onClick={handleRemoveImage}
+                      >
+                        ✕ Xóa ảnh
+                      </button>
                     </div>
-                  );
-                })}
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -238,11 +288,18 @@ export default function AddProduct({ setActiveSubTab }) {
             </div>
 
             <div className="submit-actions-card">
-              <button className="submit-product-btn" onClick={handleSubmit}>
-                <span className="btn-icon">✓</span>
-                Thêm Sản Phẩm
+              <button 
+                className="submit-product-btn" 
+                onClick={handleSubmit}
+                disabled={loading}
+              >
+                <span className="btn-icon">{loading ? '⏳' : '✓'}</span>
+                {loading 
+                  ? 'Đang lưu...' 
+                  : (editingProduct ? 'Cập Nhật Sản Phẩm' : 'Thêm Sản Phẩm')
+                }
               </button>
-              <button className="cancel-product-btn" onClick={handleCancel}>
+              <button className="cancel-product-btn" onClick={handleCancel} disabled={loading}>
                 <span className="btn-icon">✕</span>
                 Hủy Bỏ
               </button>

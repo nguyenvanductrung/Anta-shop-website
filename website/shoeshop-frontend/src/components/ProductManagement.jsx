@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AddProduct from './AddProduct';
+import adminService from '../services/adminService';
 import './ProductManagement.css';
 
-export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
+export default function ProductManagement({ activeSubTab, setActiveSubTab, onDataChange }) {
   const [filters, setFilters] = useState({
-    productName: '',
+    name: '',
     quantityMin: '',
     quantityMax: '',
     category: '',
@@ -12,66 +13,26 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
     priceMax: ''
   });
 
-  const mockProducts = [
-    {
-      id: 1,
-      name: 'Giày ANTA KT7 - Đen',
-      image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=200',
-      price: '2.990.000',
-      quantity: 45,
-      category: 'Giày Bóng Rổ',
-      rating: 5,
-      status: 'active',
-      sales: 128
-    },
-    {
-      id: 2,
-      name: 'Áo thun ANTA Running - Trắng',
-      image: 'https://images.pexels.com/photos/8532616/pexels-photo-8532616.jpeg?auto=compress&cs=tinysrgb&w=200',
-      price: '599.000',
-      quantity: 120,
-      category: 'Áo thun',
-      rating: 5,
-      status: 'active',
-      sales: 89
-    },
-    {
-      id: 3,
-      name: 'Giày ANTA C202 GT - Xanh',
-      image: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=200',
-      price: '1.790.000',
-      quantity: 28,
-      category: 'Giày Chạy Bộ',
-      rating: 4,
-      status: 'active',
-      sales: 56
-    },
-    {
-      id: 4,
-      name: 'Quần short ANTA Training',
-      image: 'https://images.pexels.com/photos/7432926/pexels-photo-7432926.jpeg?auto=compress&cs=tinysrgb&w=200',
-      price: '450.000',
-      quantity: 85,
-      category: 'Quần short',
-      rating: 5,
-      status: 'active',
-      sales: 73
-    },
-    {
-      id: 5,
-      name: 'Balo ANTA Sport - Đen',
-      image: 'https://images.pexels.com/photos/2905238/pexels-photo-2905238.jpeg?auto=compress&cs=tinysrgb&w=200',
-      price: '890.000',
-      quantity: 12,
-      category: 'Phụ kiện',
-      rating: 4,
-      status: 'low-stock',
-      sales: 34
-    }
-  ];
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingProduct, setEditingProduct] = useState(null);
 
-  const [products] = useState(mockProducts);
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  useEffect(() => {
+    loadProducts();
+  }, []);
+
+  const loadProducts = async () => {
+    setLoading(true);
+    const result = await adminService.products.getProducts();
+    if (result.success) {
+      setProducts(result.data);
+      setFilteredProducts(result.data);
+    } else {
+      alert('Không thể tải danh sách sản phẩm');
+    }
+    setLoading(false);
+  };
 
   const handleFilterChange = (field, value) => {
     setFilters(prev => ({
@@ -80,47 +41,18 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
     }));
   };
 
-  const handleSearch = () => {
-    let filtered = [...products];
-
-    if (filters.productName) {
-      filtered = filtered.filter(p => 
-        p.name.toLowerCase().includes(filters.productName.toLowerCase())
-      );
+  const handleSearch = async () => {
+    setLoading(true);
+    const result = await adminService.products.getProducts(filters);
+    if (result.success) {
+      setFilteredProducts(result.data);
     }
-
-    if (filters.category) {
-      filtered = filtered.filter(p => 
-        p.category.toLowerCase().includes(filters.category.toLowerCase())
-      );
-    }
-
-    if (filters.quantityMin) {
-      filtered = filtered.filter(p => p.quantity >= parseInt(filters.quantityMin));
-    }
-
-    if (filters.quantityMax) {
-      filtered = filtered.filter(p => p.quantity <= parseInt(filters.quantityMax));
-    }
-
-    if (filters.priceMin) {
-      filtered = filtered.filter(p => 
-        parseInt(p.price.replace(/\./g, '')) >= parseInt(filters.priceMin) * 1000
-      );
-    }
-
-    if (filters.priceMax) {
-      filtered = filtered.filter(p => 
-        parseInt(p.price.replace(/\./g, '')) <= parseInt(filters.priceMax) * 1000
-      );
-    }
-
-    setFilteredProducts(filtered);
+    setLoading(false);
   };
 
   const handleReset = () => {
     setFilters({
-      productName: '',
+      name: '',
       quantityMin: '',
       quantityMax: '',
       category: '',
@@ -134,19 +66,47 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
     return '★'.repeat(rating) + '☆'.repeat(5 - rating);
   };
 
-  const handleDeleteProduct = (productId) => {
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN').format(price);
+  };
+
+  const handleDeleteProduct = async (productId) => {
     if (window.confirm('Bạn có chắc muốn xóa sản phẩm này?')) {
-      console.log('Deleting product:', productId);
+      const result = await adminService.products.deleteProduct(productId);
+      if (result.success) {
+        alert(result.message);
+        await loadProducts();
+        if (onDataChange) onDataChange();
+      } else {
+        alert(result.error || 'Không thể xóa sản phẩm');
+      }
     }
   };
 
-  const handleEditProduct = (productId) => {
-    console.log('Editing product:', productId);
-    setActiveSubTab('add-product');
+  const handleEditProduct = async (productId) => {
+    const result = await adminService.products.getProduct(productId);
+    if (result.success) {
+      setEditingProduct(result.data);
+      setActiveSubTab('add-product');
+    } else {
+      alert('Không thể tải thông tin sản phẩm');
+    }
+  };
+
+  const handleProductSaved = async () => {
+    setEditingProduct(null);
+    await loadProducts();
+    if (onDataChange) onDataChange();
   };
 
   if (activeSubTab === 'add-product') {
-    return <AddProduct setActiveSubTab={setActiveSubTab} />;
+    return (
+      <AddProduct 
+        setActiveSubTab={setActiveSubTab} 
+        editingProduct={editingProduct}
+        onProductSaved={handleProductSaved}
+      />
+    );
   }
 
   if (activeSubTab === 'violations') {
@@ -167,7 +127,10 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
             </button>
             <button 
               className="tab-button"
-              onClick={() => setActiveSubTab('add-product')}
+              onClick={() => {
+                setEditingProduct(null);
+                setActiveSubTab('add-product');
+              }}
             >
               Thêm sản phẩm
             </button>
@@ -189,6 +152,17 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="product-management">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className="loading-text">Đang tải sản phẩm...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="product-management">
       <div className="product-management-content">
@@ -200,13 +174,19 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
         <div className="tabs-section">
           <button 
             className={`tab-button ${activeSubTab === 'my-products' ? 'active' : ''}`}
-            onClick={() => setActiveSubTab('my-products')}
+            onClick={() => {
+              setEditingProduct(null);
+              setActiveSubTab('my-products');
+            }}
           >
             Sản phẩm của tôi
           </button>
           <button 
             className="tab-button"
-            onClick={() => setActiveSubTab('add-product')}
+            onClick={() => {
+              setEditingProduct(null);
+              setActiveSubTab('add-product');
+            }}
           >
             Thêm sản phẩm
           </button>
@@ -225,8 +205,8 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
               <input
                 type="text"
                 className="filter-input"
-                value={filters.productName}
-                onChange={(e) => handleFilterChange('productName', e.target.value)}
+                value={filters.name}
+                onChange={(e) => handleFilterChange('name', e.target.value)}
                 placeholder="Nhập tên sản phẩm..."
               />
             </div>
@@ -300,68 +280,76 @@ export default function ProductManagement({ activeSubTab, setActiveSubTab }) {
           </div>
         </div>
 
-        <div className="products-table-card">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="col-product">Sản phẩm</th>
-                <th className="col-category">Danh mục</th>
-                <th className="col-price">Giá</th>
-                <th className="col-quantity">Số lượng</th>
-                <th className="col-sales">Đã bán</th>
-                <th className="col-rating">Đánh giá</th>
-                <th className="col-status">Trạng thái</th>
-                <th className="col-actions">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map((product) => (
-                <tr key={product.id} className="table-row">
-                  <td className="product-cell">
-                    <div className="product-info-cell">
-                      <img src={product.image} alt={product.name} className="product-thumbnail" />
-                      <span className="product-name">{product.name}</span>
-                    </div>
-                  </td>
-                  <td className="category-cell">{product.category}</td>
-                  <td className="price-cell">{product.price} VNĐ</td>
-                  <td className="quantity-cell">
-                    <span className={product.status === 'low-stock' ? 'low-stock-badge' : ''}>
-                      {product.quantity}
-                    </span>
-                  </td>
-                  <td className="sales-cell">{product.sales}</td>
-                  <td className="rating-cell">
-                    <span className="star-rating">{renderStars(product.rating)}</span>
-                  </td>
-                  <td className="status-cell">
-                    <span className={`status-indicator ${product.status}`}>
-                      {product.status === 'active' ? 'Đang bán' : 'Sắp h��t'}
-                    </span>
-                  </td>
-                  <td className="actions-cell">
-                    <div className="action-buttons-group">
-                      <button 
-                        className="action-edit-btn"
-                        onClick={() => handleEditProduct(product.id)}
-                        title="Chỉnh sửa"
-                      >
-                        ✏️
-                      </button>
-                      <button 
-                        className="action-delete-btn"
-                        onClick={() => handleDeleteProduct(product.id)}
-                        title="Xóa"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
+        {filteredProducts.length === 0 ? (
+          <div className="empty-state-container">
+            <span className="empty-icon">📦</span>
+            <p className="empty-title">Không tìm thấy sản phẩm</p>
+            <p className="empty-description">Thử thay đổi bộ lọc hoặc thêm sản phẩm mới</p>
+          </div>
+        ) : (
+          <div className="products-table-card">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th className="col-product">Sản phẩm</th>
+                  <th className="col-category">Danh mục</th>
+                  <th className="col-price">Giá</th>
+                  <th className="col-quantity">Số lượng</th>
+                  <th className="col-sales">Đã bán</th>
+                  <th className="col-rating">Đánh giá</th>
+                  <th className="col-status">Trạng thái</th>
+                  <th className="col-actions">Thao tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredProducts.map((product) => (
+                  <tr key={product.id} className="table-row">
+                    <td className="product-cell">
+                      <div className="product-info-cell">
+                        <img src={product.image} alt={product.name} className="product-thumbnail" />
+                        <span className="product-name">{product.name}</span>
+                      </div>
+                    </td>
+                    <td className="category-cell">{product.category}</td>
+                    <td className="price-cell">{formatPrice(product.price)} VNĐ</td>
+                    <td className="quantity-cell">
+                      <span className={product.status === 'low-stock' ? 'low-stock-badge' : ''}>
+                        {product.quantity}
+                      </span>
+                    </td>
+                    <td className="sales-cell">{product.sales}</td>
+                    <td className="rating-cell">
+                      <span className="star-rating">{renderStars(product.rating)}</span>
+                    </td>
+                    <td className="status-cell">
+                      <span className={`status-indicator ${product.status}`}>
+                        {product.status === 'active' ? 'Đang bán' : 'Sắp hết'}
+                      </span>
+                    </td>
+                    <td className="actions-cell">
+                      <div className="action-buttons-group">
+                        <button 
+                          className="action-edit-btn"
+                          onClick={() => handleEditProduct(product.id)}
+                          title="Chỉnh sửa"
+                        >
+                          ✏️
+                        </button>
+                        <button 
+                          className="action-delete-btn"
+                          onClick={() => handleDeleteProduct(product.id)}
+                          title="Xóa"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

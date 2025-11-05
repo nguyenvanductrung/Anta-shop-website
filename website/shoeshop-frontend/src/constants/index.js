@@ -46,6 +46,39 @@ export const API_ENDPOINTS = {
     LIST: '/api/wishlist',
     ADD: '/api/wishlist/add',
     REMOVE: '/api/wishlist/remove/:id'
+  },
+  ADMIN: {
+    PRODUCTS: {
+      LIST: '/api/admin/products',
+      CREATE: '/api/admin/products',
+      UPDATE: '/api/admin/products/:id',
+      DELETE: '/api/admin/products/:id',
+      DETAIL: '/api/admin/products/:id'
+    },
+    ORDERS: {
+      LIST: '/api/admin/orders',
+      UPDATE: '/api/admin/orders/:id',
+      DETAIL: '/api/admin/orders/:id',
+      UPDATE_STATUS: '/api/admin/orders/:id/status'
+    },
+    MESSAGES: {
+      LIST: '/api/admin/messages',
+      DETAIL: '/api/admin/messages/:id',
+      SEND: '/api/admin/messages',
+      MARK_READ: '/api/admin/messages/:id/read'
+    },
+    NOTIFICATIONS: {
+      LIST: '/api/admin/notifications',
+      MARK_READ: '/api/admin/notifications/:id/read',
+      MARK_ALL_READ: '/api/admin/notifications/read-all'
+    },
+    SETTINGS: {
+      GET: '/api/admin/settings',
+      UPDATE: '/api/admin/settings'
+    },
+    STATS: {
+      DASHBOARD: '/api/admin/stats/dashboard'
+    }
   }
 };
 

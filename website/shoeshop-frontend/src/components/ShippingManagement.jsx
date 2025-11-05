@@ -1,117 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import adminService from '../services/adminService';
 import './ShippingManagement.css';
 
-export default function ShippingManagement() {
+export default function ShippingManagement({ onDataChange }) {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [searchOrder, setSearchOrder] = useState('');
+  const [orders, setOrders] = useState([]);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const statusFilters = [
-    { id: 'all', label: 'Tất cả', count: 18 },
-    { id: 'unpaid', label: 'Chưa thanh toán', count: 3 },
-    { id: 'needs-shipping', label: 'Cần gửi', count: 5 },
-    { id: 'sent', label: 'Đã gửi', count: 10 },
-    { id: 'completed', label: 'Hoàn thành', count: 2 },
+    { id: 'all', label: 'Tất cả', count: 0 },
+    { id: 'unpaid', label: 'Chưa thanh toán', count: 0 },
+    { id: 'needs-shipping', label: 'Cần gửi', count: 0 },
+    { id: 'sent', label: 'Đã gửi', count: 0 },
+    { id: 'completed', label: 'Hoàn thành', count: 0 },
     { id: 'cancelled', label: 'Hủy bỏ', count: 0 },
     { id: 'return', label: 'Trả hàng', count: 0 }
   ];
 
-  const mockOrders = [
-    {
-      id: 1,
-      customer: 'Nguyễn Văn A',
-      orderNumber: '2201223FJAOQ',
-      date: '25/12/2024',
-      total: '1.000.000 VNĐ',
-      status: 'needs-shipping',
-      products: [
-        {
-          id: 1,
-          name: 'Giày ANTA KT7 - Đen',
-          image: 'https://images.pexels.com/photos/1598505/pexels-photo-1598505.jpeg?auto=compress&cs=tinysrgb&w=80',
-          price: '600.000 VNĐ',
-          quantity: 1,
-          dueDate: 'Trước 28/12/2024',
-          shippingService: 'J&T'
-        }
-      ]
-    },
-    {
-      id: 2,
-      customer: 'Trần Thị B',
-      orderNumber: '2197139TYQPWO',
-      date: '24/12/2024',
-      total: '800.000 VNĐ',
-      status: 'needs-shipping',
-      products: [
-        {
-          id: 2,
-          name: 'Áo thun ANTA Running',
-          image: 'https://images.pexels.com/photos/8532616/pexels-photo-8532616.jpeg?auto=compress&cs=tinysrgb&w=80',
-          price: '400.000 VNĐ',
-          quantity: 2,
-          dueDate: 'Trước 27/12/2024',
-          shippingService: 'GHTK'
-        }
-      ]
-    },
-    {
-      id: 3,
-      customer: 'Lê Văn C',
-      orderNumber: '2198456ABCDE',
-      date: '23/12/2024',
-      total: '2.990.000 VNĐ',
-      status: 'sent',
-      products: [
-        {
-          id: 3,
-          name: 'Giày ANTA C202 GT',
-          image: 'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=80',
-          price: '1.790.000 VNĐ',
-          quantity: 1,
-          dueDate: 'Đang giao hàng',
-          shippingService: 'Viettel Post'
-        }
-      ]
-    },
-    {
-      id: 4,
-      customer: 'Phạm Thị D',
-      orderNumber: '2199678FGHIJ',
-      date: '22/12/2024',
-      total: '1.340.000 VNĐ',
-      status: 'completed',
-      products: [
-        {
-          id: 4,
-          name: 'Quần short ANTA Training',
-          image: 'https://images.pexels.com/photos/7432926/pexels-photo-7432926.jpeg?auto=compress&cs=tinysrgb&w=80',
-          price: '450.000 VNĐ',
-          quantity: 2,
-          dueDate: 'Đã hoàn thành',
-          shippingService: 'J&T'
-        }
-      ]
-    }
-  ];
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
-  const [orders] = useState(mockOrders);
-  const [filteredOrders, setFilteredOrders] = useState(mockOrders);
+  const loadOrders = async () => {
+    setLoading(true);
+    const result = await adminService.orders.getOrders();
+    if (result.success) {
+      setOrders(result.data);
+      setFilteredOrders(result.data);
+    } else {
+      alert('Không thể tải danh sách đơn hàng');
+    }
+    setLoading(false);
+  };
 
-  const handleSearch = () => {
-    let filtered = [...orders];
-    
-    if (searchOrder) {
-      filtered = filtered.filter(order => 
-        order.orderNumber.toLowerCase().includes(searchOrder.toLowerCase()) ||
-        order.customer.toLowerCase().includes(searchOrder.toLowerCase())
-      );
+  const getStatusCounts = () => {
+    const counts = {
+      all: orders.length,
+      unpaid: 0,
+      'needs-shipping': 0,
+      sent: 0,
+      completed: 0,
+      cancelled: 0,
+      return: 0
+    };
+
+    orders.forEach(order => {
+      if (counts[order.status] !== undefined) {
+        counts[order.status]++;
+      }
+    });
+
+    return statusFilters.map(filter => ({
+      ...filter,
+      count: counts[filter.id] || 0
+    }));
+  };
+
+  const handleSearch = async () => {
+    setLoading(true);
+    const result = await adminService.orders.getOrders({
+      search: searchOrder,
+      status: selectedStatus
+    });
+    if (result.success) {
+      setFilteredOrders(result.data);
     }
-    
-    if (selectedStatus !== 'all') {
-      filtered = filtered.filter(order => order.status === selectedStatus);
-    }
-    
-    setFilteredOrders(filtered);
+    setLoading(false);
   };
 
   const handleReset = () => {
@@ -120,20 +76,44 @@ export default function ShippingManagement() {
     setFilteredOrders(orders);
   };
 
-  const handleStatusChange = (statusId) => {
+  const handleStatusChange = async (statusId) => {
     setSelectedStatus(statusId);
-    let filtered = [...orders];
-    
-    if (statusId !== 'all') {
-      filtered = filtered.filter(order => order.status === statusId);
+    setLoading(true);
+    const result = await adminService.orders.getOrders({
+      status: statusId
+    });
+    if (result.success) {
+      setFilteredOrders(result.data);
     }
-    
-    setFilteredOrders(filtered);
+    setLoading(false);
   };
 
-  const handleArrangeShipping = (orderId, productId) => {
-    console.log('Arranging shipping for order:', orderId, 'product:', productId);
-    alert('Chức năng sắp xếp giao hàng sẽ được phát triển');
+  const handleArrangeShipping = async (orderId) => {
+    const shippingData = {
+      service: 'J&T Express',
+      trackingNumber: 'JT' + Date.now(),
+      estimatedDelivery: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('vi-VN')
+    };
+
+    const result = await adminService.orders.arrangeShipping(orderId, shippingData);
+    if (result.success) {
+      alert(result.message);
+      await loadOrders();
+      if (onDataChange) onDataChange();
+    } else {
+      alert(result.error || 'Không thể sắp xếp giao hàng');
+    }
+  };
+
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    const result = await adminService.orders.updateOrderStatus(orderId, newStatus);
+    if (result.success) {
+      alert(result.message);
+      await loadOrders();
+      if (onDataChange) onDataChange();
+    } else {
+      alert(result.error || 'Không thể cập nhật trạng thái');
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -149,6 +129,21 @@ export default function ShippingManagement() {
     return statusMap[status] || statusMap['all'];
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
+
+  if (loading && orders.length === 0) {
+    return (
+      <div className="shipping-management">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p className="loading-text">Đang tải đơn hàng...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="shipping-management">
       <div className="shipping-management-content">
@@ -158,7 +153,7 @@ export default function ShippingManagement() {
         </div>
 
         <div className="status-filters-section">
-          {statusFilters.map((filter) => (
+          {getStatusCounts().map((filter) => (
             <button
               key={filter.id}
               className={`status-filter-btn ${selectedStatus === filter.id ? 'active' : ''}`}
@@ -180,6 +175,7 @@ export default function ShippingManagement() {
               placeholder="Nhập số đơn hàng hoặc tên khách hàng..."
               value={searchOrder}
               onChange={(e) => setSearchOrder(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
             <span className="search-input-icon">🔍</span>
           </div>
@@ -224,7 +220,7 @@ export default function ShippingManagement() {
                   <div className="order-info-right">
                     <div className="order-total-section">
                       <span className="total-label">Tổng cộng:</span>
-                      <span className="total-value">{order.total}</span>
+                      <span className="total-value">{formatCurrency(order.total)}</span>
                     </div>
                     <span className={`order-status-badge ${order.status}`}>
                       {getStatusBadge(order.status).label}
@@ -244,7 +240,7 @@ export default function ShippingManagement() {
                         <div className="product-order-details">
                           <h4 className="product-order-name">{product.name}</h4>
                           <p className="product-order-price">
-                            {product.price} × {product.quantity}
+                            {formatCurrency(product.price)} × {product.quantity}
                           </p>
                         </div>
                       </div>
@@ -267,17 +263,26 @@ export default function ShippingManagement() {
                         <span className="quantity-value">{product.quantity}</span>
                       </div>
                       
-                      {order.status === 'needs-shipping' && (
-                        <div className="product-actions-section">
+                      <div className="product-actions-section">
+                        {order.status === 'needs-shipping' && (
                           <button 
                             className="arrange-shipping-button"
-                            onClick={() => handleArrangeShipping(order.id, product.id)}
+                            onClick={() => handleArrangeShipping(order.id)}
                           >
                             <span className="btn-icon">📦</span>
                             Sắp xếp giao hàng
                           </button>
-                        </div>
-                      )}
+                        )}
+                        {order.status === 'sent' && (
+                          <button 
+                            className="complete-order-button"
+                            onClick={() => handleUpdateStatus(order.id, 'completed')}
+                          >
+                            <span className="btn-icon">✓</span>
+                            Hoàn thành
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
