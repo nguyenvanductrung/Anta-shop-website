@@ -13,6 +13,7 @@ export default function OrderSuccessPage() {
   const { showSuccess } = useToast();
   const [showAnimation, setShowAnimation] = useState(false);
   const [orderData, setOrderData] = useState(null);
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const hasShownToast = useRef(false);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function OrderSuccessPage() {
 
     if (data) {
       setOrderData(data);
+      setPaymentConfirmed(location.state?.paymentConfirmed || false);
       refreshOrders();
       setShowAnimation(true);
 

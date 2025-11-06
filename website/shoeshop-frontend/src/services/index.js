@@ -8,3 +8,5 @@ export {
   orderService,
   wishlistService
 } from './api';
+
+export { momoPaymentService } from './momoPaymentService';

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Layout } from '../components';
 import { useCart, useAuth, useDataSync } from '../contexts';
 import { adminOrderService } from '../services/adminService';
+import { momoPaymentService } from '../services';
 import { generateMoMoQR, generateVNPayQR, generateBankTransferQR } from '../utils/qrCodeGenerator';
 import './CheckoutPage.css';
 
@@ -39,6 +40,9 @@ export default function CheckoutPage() {
   const [showQRCode, setShowQRCode] = useState(false);
   const [qrData, setQrData] = useState(null);
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+  const [paymentProgress, setPaymentProgress] = useState(null);
+  const [momoTransactionId, setMomoTransactionId] = useState(null);
+  const paymentTimerRef = useRef(null);
 
   useEffect(() => {
     // Load user profile and default address
@@ -106,7 +110,7 @@ export default function CheckoutPage() {
   };
 
   const PAYMENT_METHODS = [
-    { id: 'cod', name: 'Thanh toán khi nhận hàng (COD)', icon: '��', desc: 'Thanh toán bằng tiền mặt khi nhận hàng', requireQR: false },
+    { id: 'cod', name: 'Thanh toán khi nhận hàng (COD)', icon: '💸', desc: 'Thanh toán bằng tiền mặt khi nhận hàng', requireQR: false },
     { id: 'bank', name: 'Chuyển khoản ngân hàng', icon: '🏦', desc: 'Quét mã QR để chuyển khoản', requireQR: true },
     { id: 'momo', name: 'Ví MoMo', icon: '📱', desc: 'Quét mã QR từ ví điện tử MoMo', requireQR: true },
     { id: 'vnpay', name: 'VNPAY', icon: '💳', desc: 'Quét mã QR thanh toán qua VNPAY', requireQR: true }
@@ -203,6 +207,19 @@ export default function CheckoutPage() {
     setPromoCode('');
   };
 
+  const handlePaymentMethodChange = (newMethod) => {
+    const oldMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod);
+    const newMethodObj = PAYMENT_METHODS.find(m => m.id === newMethod);
+
+    setPaymentMethod(newMethod);
+
+    if (oldMethod?.requireQR && !newMethodObj?.requireQR) {
+      setQrData(null);
+      setPaymentConfirmed(false);
+      setShowQRCode(false);
+    }
+  };
+
   const validateStep1 = () => {
     const newErrors = {};
     newErrors.fullName = validateField('fullName', formData.fullName);
@@ -239,14 +256,18 @@ export default function CheckoutPage() {
       const userOrdersKey = 'anta_user_orders';
       const userOrders = JSON.parse(localStorage.getItem(userOrdersKey) || '[]');
 
+      const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod);
+      const isQRPayment = selectedMethod?.requireQR;
+
       const orderRecord = {
         id: orderData.orderNumber || orderData.id,
         orderNumber: orderData.orderNumber,
         date: orderData.date || new Date().toISOString(),
         createdAt: orderData.orderDate || new Date().toISOString(),
         status: 'Đang xử lý',
-        paymentStatus: paymentMethod === 'cod' ? 'Chưa thanh toán' : (paymentConfirmed ? 'Đã thanh toán' : 'Chờ xác nhận'),
+        paymentStatus: paymentMethod === 'cod' ? 'Chưa thanh toán' : (isQRPayment && paymentConfirmed ? 'Đã thanh toán' : 'Chờ xác nhận'),
         paymentMethod: paymentMethod,
+        paymentConfirmed: paymentConfirmed,
         total: orderData.total,
         totalAmount: orderData.total,
         items: orderData.products?.length || orderData.items?.length,
@@ -270,9 +291,9 @@ export default function CheckoutPage() {
 
       userOrders.unshift(orderRecord);
       localStorage.setItem(userOrdersKey, JSON.stringify(userOrders));
-      
+
       localStorage.setItem('latest_order', JSON.stringify(orderRecord));
-      
+
       console.log('Order saved to localStorage successfully');
       return true;
     } catch (error) {
@@ -289,9 +310,25 @@ export default function CheckoutPage() {
     };
 
     let qrInfo;
+    let transactionId = null;
+
     switch (paymentMethod) {
       case 'momo':
-        qrInfo = generateMoMoQR(orderData);
+        // Use simulated MoMo service
+        const momoRequest = momoPaymentService.createPaymentRequest(orderData);
+        if (momoRequest.success) {
+          transactionId = momoRequest.data.transactionId;
+          const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(momoRequest.data.qrCodeData.qrContent)}`;
+          qrInfo = {
+            ...momoRequest.data.qrCodeData,
+            qrCodeUrl,
+            transactionId,
+          };
+          setMomoTransactionId(transactionId);
+
+          // Start auto-processing simulation
+          startMoMoSimulation(transactionId);
+        }
         break;
       case 'vnpay':
         qrInfo = generateVNPayQR(orderData);
@@ -307,16 +344,60 @@ export default function CheckoutPage() {
     setShowQRCode(true);
   };
 
+  const startMoMoSimulation = async (transactionId) => {
+    // Auto-process the payment with progress updates
+    const result = await momoPaymentService.autoProcessPayment(
+      transactionId,
+      (progress) => {
+        setPaymentProgress(progress);
+      }
+    );
+
+    if (result.success) {
+      // Payment successful
+      setTimeout(() => {
+        setPaymentConfirmed(true);
+        setPaymentProgress({ status: 'success', message: 'Thanh toán thành công!' });
+
+        // Auto-close modal and process order after showing success
+        setTimeout(() => {
+          setShowQRCode(false);
+          processOrder();
+        }, 1500);
+      }, 500);
+    } else {
+      // Payment failed
+      setPaymentProgress({
+        status: 'failed',
+        message: result.error || 'Thanh toán thất bại. Vui lòng thử lại.'
+      });
+    }
+  };
+
   const handleConfirmPayment = async () => {
     setPaymentConfirmed(true);
     setShowQRCode(false);
     await processOrder();
   };
 
+  const handleCancelQR = () => {
+    if (momoTransactionId && paymentMethod === 'momo') {
+      momoPaymentService.cancelPayment(momoTransactionId);
+    }
+    if (paymentTimerRef.current) {
+      clearTimeout(paymentTimerRef.current);
+    }
+    setPaymentProgress(null);
+    setShowQRCode(false);
+  };
+
   const processOrder = async () => {
     setIsSubmitting(true);
 
     try {
+      const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod);
+      const isQRPayment = selectedMethod?.requireQR;
+
       const orderData = {
         customer: {
           ...formData,
@@ -330,14 +411,14 @@ export default function CheckoutPage() {
         total: finalTotal,
         promoCode: appliedPromo?.code || '',
         orderDate: new Date().toISOString(),
-        paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid'
+        paymentStatus: paymentMethod === 'cod' ? 'pending' : (isQRPayment && paymentConfirmed ? 'paid' : 'pending')
       };
 
       const result = await adminOrderService.createOrder(orderData);
 
       if (result.success) {
         const newOrder = result.data;
-        
+
         saveOrderToLocalStorage(newOrder);
 
         clearCart();
@@ -383,9 +464,15 @@ export default function CheckoutPage() {
     }
 
     const selectedMethod = PAYMENT_METHODS.find(m => m.id === paymentMethod);
-    
-    if (selectedMethod?.requireQR) {
+
+    if (selectedMethod?.requireQR && !qrData) {
       generateQRCodeForPayment();
+      return;
+    }
+
+    if (selectedMethod?.requireQR && !paymentConfirmed) {
+      alert('Vui lòng quét mã QR và xác nhận thanh toán trước khi hoàn tất đơn hàng');
+      setShowQRCode(true);
       return;
     }
 
@@ -660,7 +747,7 @@ export default function CheckoutPage() {
                               name="payment"
                               value={method.id}
                               checked={paymentMethod === method.id}
-                              onChange={(e) => setPaymentMethod(e.target.value)}
+                              onChange={(e) => handlePaymentMethodChange(e.target.value)}
                             />
                             <div className="option-content">
                               <div className="option-icon">{method.icon}</div>
@@ -703,18 +790,43 @@ export default function CheckoutPage() {
                         </div>
                       </div>
 
+                      {qrData && PAYMENT_METHODS.find(m => m.id === paymentMethod)?.requireQR && (
+                        <div className="qr-payment-status">
+                          {paymentConfirmed ? (
+                            <div className="payment-confirmed-notice">
+                              <span className="confirmed-icon">✓</span>
+                              <span>Đã xác nhận thanh toán</span>
+                            </div>
+                          ) : (
+                            <div className="qr-reopen-section">
+                              <div className="qr-pending-notice">
+                                <span className="pending-icon">⏳</span>
+                                <span>Chưa xác nhận thanh toán</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-reopen-qr"
+                                onClick={() => setShowQRCode(true)}
+                              >
+                                Xem lại mã QR
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="step-actions">
                         <button type="button" className="btn-secondary" onClick={handlePrevStep}>
                           ← Quay lại
                         </button>
-                        <button 
-                          type="submit" 
+                        <button
+                          type="submit"
                           className="btn-primary btn-place-order"
-                          disabled={isSubmitting}
+                          disabled={isSubmitting || (PAYMENT_METHODS.find(m => m.id === paymentMethod)?.requireQR && qrData && !paymentConfirmed)}
                         >
                           {isSubmitting ? 'Đang xử lý...' : (
-                            PAYMENT_METHODS.find(m => m.id === paymentMethod)?.requireQR 
-                              ? 'Tiếp tục thanh toán' 
+                            PAYMENT_METHODS.find(m => m.id === paymentMethod)?.requireQR
+                              ? (paymentConfirmed ? 'Hoàn tất đơn hàng' : 'Tiếp tục thanh toán')
                               : 'Đặt hàng'
                           )}
                         </button>
@@ -826,57 +938,139 @@ export default function CheckoutPage() {
         </div>
 
         {showQRCode && qrData && (
-          <div className="qr-modal-overlay" onClick={() => setShowQRCode(false)}>
+          <div className="qr-modal-overlay" onClick={paymentMethod === 'momo' && paymentProgress ? null : handleCancelQR}>
             <div className="qr-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="qr-close-btn" onClick={() => setShowQRCode(false)}>✕</button>
-              
+              <button
+                className="qr-close-btn"
+                onClick={handleCancelQR}
+                disabled={paymentMethod === 'momo' && paymentProgress && paymentProgress.status !== 'failed'}
+              >
+                ✕
+              </button>
+
               <div className="qr-header">
-                <h2>Quét mã QR để thanh toán</h2>
-                <p>Vui lòng sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã</p>
+                <h2>
+                  {paymentMethod === 'momo' ? 'Thanh toán MoMo' : 'Quét mã QR để thanh toán'}
+                </h2>
+                <p>
+                  {paymentMethod === 'momo'
+                    ? 'Quét mã QR bằng ứng dụng MoMo của bạn'
+                    : 'Vui lòng sử dụng ứng dụng ngân hàng hoặc ví điện tử để quét mã'}
+                </p>
               </div>
 
               <div className="qr-content">
-                <div className="qr-code-wrapper">
-                  <img src={qrData.qrCodeUrl} alt="QR Code" className="qr-code-image" />
-                </div>
+                {paymentMethod === 'momo' && paymentProgress ? (
+                  <div className="payment-simulation">
+                    <div className="qr-code-wrapper-small">
+                      <img src={qrData.qrCodeUrl} alt="QR Code" className="qr-code-image" />
+                    </div>
 
-                <div className="payment-info">
-                  <h3>Thông tin chuyển khoản</h3>
-                  <div className="payment-detail-row">
-                    <span className="detail-label">Số tài khoản:</span>
-                    <span className="detail-value">{qrData.bankAccount || qrData.phoneNumber}</span>
+                    <div className="simulation-progress">
+                      {paymentProgress.status === 'scanning' && (
+                        <div className="progress-step active">
+                          <div className="progress-spinner"></div>
+                          <p className="progress-message">{paymentProgress.message}</p>
+                        </div>
+                      )}
+                      {paymentProgress.status === 'detected' && (
+                        <div className="progress-step active">
+                          <div className="progress-icon success">✓</div>
+                          <p className="progress-message">{paymentProgress.message}</p>
+                        </div>
+                      )}
+                      {paymentProgress.status === 'opening_app' && (
+                        <div className="progress-step active">
+                          <div className="progress-spinner"></div>
+                          <p className="progress-message">{paymentProgress.message}</p>
+                        </div>
+                      )}
+                      {paymentProgress.status === 'processing' && (
+                        <div className="progress-step active">
+                          <div className="progress-spinner"></div>
+                          <p className="progress-message">{paymentProgress.message}</p>
+                        </div>
+                      )}
+                      {paymentProgress.status === 'success' && (
+                        <div className="progress-step active success">
+                          <div className="progress-icon success-large">✓</div>
+                          <p className="progress-message success-text">{paymentProgress.message}</p>
+                          <p className="progress-submessage">Đang chuyển đến trang xác nhận...</p>
+                        </div>
+                      )}
+                      {paymentProgress.status === 'failed' && (
+                        <div className="progress-step active failed">
+                          <div className="progress-icon failed-large">✕</div>
+                          <p className="progress-message failed-text">{paymentProgress.message}</p>
+                          <button
+                            className="btn-retry"
+                            onClick={() => {
+                              setPaymentProgress(null);
+                              setShowQRCode(false);
+                              setQrData(null);
+                            }}
+                          >
+                            Thử lại
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="payment-detail-row">
-                    <span className="detail-label">Ngân hàng:</span>
-                    <span className="detail-value">{qrData.bankName || qrData.bankCode}</span>
-                  </div>
-                  <div className="payment-detail-row">
-                    <span className="detail-label">Chủ tài khoản:</span>
-                    <span className="detail-value">{qrData.accountName}</span>
-                  </div>
-                  <div className="payment-detail-row">
-                    <span className="detail-label">Số tiền:</span>
-                    <span className="detail-value amount">{qrData.amount.toLocaleString()}₫</span>
-                  </div>
-                  <div className="payment-detail-row">
-                    <span className="detail-label">Nội dung:</span>
-                    <span className="detail-value">{qrData.note}</span>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="qr-code-wrapper">
+                      <img src={qrData.qrCodeUrl} alt="QR Code" className="qr-code-image" />
+                    </div>
 
-                <div className="qr-notice">
-                  <span className="notice-icon">⚠️</span>
-                  <p>Sau khi chuyển khoản thành công, vui lòng nhấn "Xác nhận đã thanh toán" bên dưới</p>
-                </div>
+                    <div className="payment-info">
+                      <h3>Thông tin chuyển khoản</h3>
+                      <div className="payment-detail-row">
+                        <span className="detail-label">Số tài khoản:</span>
+                        <span className="detail-value">{qrData.bankAccount || qrData.phoneNumber}</span>
+                      </div>
+                      <div className="payment-detail-row">
+                        <span className="detail-label">Ngân hàng:</span>
+                        <span className="detail-value">{qrData.bankName || qrData.bankCode}</span>
+                      </div>
+                      <div className="payment-detail-row">
+                        <span className="detail-label">Chủ tài khoản:</span>
+                        <span className="detail-value">{qrData.accountName}</span>
+                      </div>
+                      <div className="payment-detail-row">
+                        <span className="detail-label">Số tiền:</span>
+                        <span className="detail-value amount">{qrData.amount.toLocaleString()}₫</span>
+                      </div>
+                      <div className="payment-detail-row">
+                        <span className="detail-label">Nội dung:</span>
+                        <span className="detail-value">{qrData.note}</span>
+                      </div>
+                      {qrData.transactionId && (
+                        <div className="payment-detail-row">
+                          <span className="detail-label">Mã giao dịch:</span>
+                          <span className="detail-value transaction-id">{qrData.transactionId}</span>
+                        </div>
+                      )}
+                    </div>
 
-                <div className="qr-actions">
-                  <button className="btn-secondary" onClick={() => setShowQRCode(false)}>
-                    Hủy
-                  </button>
-                  <button className="btn-primary" onClick={handleConfirmPayment} disabled={isSubmitting}>
-                    {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đã thanh toán'}
-                  </button>
-                </div>
+                    {paymentMethod !== 'momo' && (
+                      <>
+                        <div className="qr-notice">
+                          <span className="notice-icon">⚠️</span>
+                          <p>Sau khi chuyển khoản thành công, vui lòng nhấn "Xác nhận đã thanh toán" bên dưới</p>
+                        </div>
+
+                        <div className="qr-actions">
+                          <button className="btn-secondary" onClick={handleCancelQR}>
+                            Hủy
+                          </button>
+                          <button className="btn-primary" onClick={handleConfirmPayment} disabled={isSubmitting}>
+                            {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đã thanh toán'}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           </div>

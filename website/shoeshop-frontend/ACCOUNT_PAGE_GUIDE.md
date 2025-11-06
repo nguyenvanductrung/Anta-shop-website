@@ -148,7 +148,7 @@ Account Page đã được hoàn thiện với dữ liệu hardcode + localStora
    - Người nhận: Nguyễn Văn A
    - SĐT: 0123456789
 2. **456 Trần Duy Hưng, Cầu Giấy, Hà Nội**
-   - Ng��ời nhận: Nguyễn Văn A
+   - Người nhận: Nguyễn Văn A
    - SĐT: 0987654321
 
 ## Kiểm Tra Chức Năng
