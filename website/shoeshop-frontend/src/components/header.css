@@ -147,22 +147,6 @@
   position: relative;
 }
 
-.nav-item-link::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 12px;
-  right: 12px;
-  height: 3px;
-  background: var(--color-primary);
-  transform: scaleX(0);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.nav-item-link:hover::after {
-  transform: scaleX(1);
-}
-
 .nav-item-link:hover {
   background-color: transparent;
 }
