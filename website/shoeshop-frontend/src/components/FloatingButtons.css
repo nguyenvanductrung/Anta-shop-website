@@ -1,36 +1,38 @@
 .floating-buttons-container {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 999;
+  bottom: 28px;
+  right: 28px;
+  z-index: 998;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 14px;
+  pointer-events: none;
 }
 
 .floating-buttons-group {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 14px;
+  pointer-events: auto;
 }
 
 .floating-buttons-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  animation: slideInUp 0.3s ease;
+  gap: 14px;
+  animation: slideInUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 @keyframes slideInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(20px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -38,13 +40,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 12px 18px;
   background: white;
   border: none;
   border-radius: 50px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   color: white;
   font-size: 14px;
   font-weight: 600;
@@ -54,8 +56,12 @@
 }
 
 .floating-button:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.floating-button:active {
+  transform: translateY(-2px) scale(1.02);
 }
 
 .floating-button svg {
@@ -65,6 +71,7 @@
 .button-label {
   white-space: nowrap;
   font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
 .phone-button {
@@ -103,7 +110,7 @@
   align-items: center;
   justify-content: center;
   color: white;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
 }
 
@@ -117,11 +124,15 @@
 }
 
 .floating-button-toggle svg {
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .floating-buttons-group.is-expanded .floating-button-toggle {
   background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+}
+
+.floating-buttons-group.is-expanded .floating-button-toggle svg {
+  transform: rotate(180deg);
 }
 
 .scroll-to-top-button {
@@ -136,11 +147,12 @@
   align-items: center;
   justify-content: center;
   color: var(--color-dark);
-  transition: all 0.3s ease;
-  animation: fadeIn 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: fadeInScale 0.3s ease;
+  pointer-events: auto;
 }
 
-@keyframes fadeIn {
+@keyframes fadeInScale {
   from {
     opacity: 0;
     transform: scale(0.8);
@@ -155,24 +167,33 @@
   background: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.08);
   box-shadow: 0 6px 16px rgba(215, 0, 16, 0.3);
 }
 
 .scroll-to-top-button:active {
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.04);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 992px) {
   .floating-buttons-container {
-    bottom: 16px;
-    right: 16px;
+    bottom: 24px;
+    right: 24px;
+    gap: 12px;
+  }
+
+  .floating-buttons-group {
+    gap: 12px;
+  }
+
+  .floating-buttons-list {
+    gap: 12px;
   }
 
   .floating-button {
-    padding: 10px 14px;
-    height: 48px;
-    min-width: 48px;
+    padding: 11px 16px;
+    height: 52px;
+    min-width: 52px;
     font-size: 13px;
   }
 
@@ -181,32 +202,81 @@
   }
 
   .floating-button-toggle {
+    width: 54px;
+    height: 54px;
+  }
+
+  .scroll-to-top-button {
+    width: 46px;
+    height: 46px;
+  }
+}
+
+@media (max-width: 768px) {
+  .floating-buttons-container {
+    bottom: 20px;
+    right: 20px;
+    gap: 12px;
+  }
+
+  .floating-button {
+    padding: 10px 14px;
+    height: 48px;
+    min-width: 48px;
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  .button-label {
+    font-size: 12px;
+  }
+
+  .floating-button-toggle {
     width: 52px;
     height: 52px;
+  }
+
+  .floating-button-toggle svg {
+    width: 22px;
+    height: 22px;
   }
 
   .scroll-to-top-button {
     width: 44px;
     height: 44px;
   }
+
+  .scroll-to-top-button svg {
+    width: 22px;
+    height: 22px;
+  }
 }
 
 @media (max-width: 480px) {
   .floating-buttons-container {
-    bottom: 12px;
-    right: 12px;
+    bottom: 16px;
+    right: 16px;
+    gap: 10px;
+  }
+
+  .floating-buttons-group {
+    gap: 10px;
+  }
+
+  .floating-buttons-list {
+    gap: 10px;
   }
 
   .floating-button {
-    padding: 8px 12px;
+    padding: 9px 13px;
     height: 44px;
     min-width: 44px;
-    font-size: 12px;
+    font-size: 11px;
     gap: 8px;
   }
 
   .button-label {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .floating-button-toggle {
