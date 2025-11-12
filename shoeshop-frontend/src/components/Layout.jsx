@@ -6,7 +6,7 @@ import './Layout.css';
 const Layout = ({ children }) => {
   return (
     <div className="layout">
-      <TopBanner />
+      {/* <TopBanner /> */}
       <Header />
       <main className="layout-main">
         {children}

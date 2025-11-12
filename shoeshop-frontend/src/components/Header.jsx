@@ -143,11 +143,12 @@ const Header = () => {
           </nav>
 
           <div className="header-right">
-            <button
+            {/* <button
               className="header-action user-action"
               onClick={() => {
                 if (!isAuthenticated) {
-                  navigate(ROUTES.LOGIN);
+                  // navigate(ROUTES.LOGIN);
+                  navigate('/login');
                 } else if (user?.role === 'ADMIN') {
                   navigate(ROUTES.ADMIN);
                 } else {
@@ -165,7 +166,30 @@ const Header = () => {
                   strokeLinejoin="round"
                 />
               </svg>
-            </button>
+            </button> */}
+            <button
+  className="header-action user-action"
+  onClick={() => {
+    if (!isAuthenticated) {
+      navigate('/login');  // Đã sửa thành '/login'
+    } else if (user?.role === 'ADMIN') {
+      navigate(ROUTES.ADMIN);
+    } else {
+      navigate('/account');
+    }
+  }}
+  aria-label={isAuthenticated ? "Tài khoản" : "Đăng nhập"}
+>
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <path
+      d="M16 17V15C16 13.9391 15.5786 12.9217 14.8284 12.1716C14.0783 11.4214 13.0609 11 12 11H6C4.93913 11 3.92172 11.4214 3.17157 12.1716C2.42143 12.9217 2 13.9391 2 15V17M13 5C13 6.65685 11.6569 8 10 8C8.34315 8 7 6.65685 7 5C7 3.34315 8.34315 2 10 2C11.6569 2 13 3.34315 13 5Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+</button>
 
             <button
               className="header-action wishlist-action"
@@ -173,7 +197,8 @@ const Header = () => {
                 if (isAuthenticated) {
                   navigate('/account/wishlist');
                 } else {
-                  navigate(ROUTES.LOGIN);
+                  // navigate(ROUTES.LOGIN);
+                  navigate('/login');
                 }
               }}
               aria-label="Yêu thích"
@@ -263,7 +288,8 @@ const Header = () => {
               ) : (
                 <button
                   className="auth-button"
-                  onClick={() => handlePushRouter(ROUTES.LOGIN)}
+                  // onClick={() => handlePushRouter(ROUTES.LOGIN)}
+                  onClick={() => handlePushRouter('/login')}
                 >
                   Đăng nhập
                 </button>
